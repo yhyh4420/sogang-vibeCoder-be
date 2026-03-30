@@ -2,17 +2,15 @@ package com.k.medtour.domain.journey.dto;
 
 import com.k.medtour.domain.journey.entity.JourneyTemplateItem;
 import com.k.medtour.domain.journey.enums.ScheduleItemType;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
 public record TemplateItemDto(
         Long id,
-        @NotNull Integer dayOffset,
-        @NotBlank String timeOffset,
-        @NotBlank String title,
-        @NotNull ScheduleItemType type,
+        Integer dayOffset,
+        String timeOffset,
+        String title,
+        ScheduleItemType type,
         String description,
         Integer durationMinutes,
         LocationDto location,

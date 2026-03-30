@@ -1,11 +1,14 @@
 package com.k.medtour.domain.aftercare.repository;
 
 import com.k.medtour.domain.aftercare.entity.AftercareGuide;
-import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface AftercareGuideRepository extends JpaRepository<AftercareGuide, Long> {
+public interface AftercareGuideRepository {
+
+    AftercareGuide save(AftercareGuide guide);
+
+    Optional<AftercareGuide> findById(Long id);
 
     Optional<AftercareGuide> findByJourneyIdAndDeletedAtIsNull(Long journeyId);
 

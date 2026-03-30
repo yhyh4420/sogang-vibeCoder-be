@@ -35,10 +35,6 @@ import com.k.medtour.global.common.PageResponse;
 import com.k.medtour.global.exception.BusinessException;
 import com.k.medtour.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,9 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class JourneyService {
 
     private final JourneyTemplateRepository templateRepository;
@@ -63,11 +57,12 @@ public class JourneyService {
 
     // ======================== Template CRUD ========================
 
-    public PageResponse<TemplateListResponse> getTemplates(String keyword, TemplateCategory category, Pageable pageable) {
-        Page<TemplateListResponse> page = templateRepository
-                .findAllByFilters(keyword, category, pageable)
-                .map(TemplateListResponse::from);
-        return PageResponse.from(page);
+    public PageResponse<TemplateListResponse> getTemplates(String keyword, TemplateCategory category, int page, int size) {
+        List<JourneyTemplate> templates = templateRepository.findAllByFilters(keyword, category, page, size);
+        long totalElements = templateRepository.countByFilters(keyword, category);
+        List<TemplateListResponse> content = templates.stream().map(TemplateListResponse::from).toList();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        return new PageResponse<>(content, page, size, totalElements, totalPages);
     }
 
     public TemplateResponse getTemplate(Long templateId) {
@@ -75,7 +70,6 @@ public class JourneyService {
         return TemplateResponse.from(template);
     }
 
-    @Transactional
     public TemplateResponse createTemplate(TemplateCreateRequest request) {
         if (templateRepository.existsByName(request.name())) {
             throw new BusinessException(ErrorCode.TEMPLATE_DUPLICATE_NAME);
@@ -109,7 +103,6 @@ public class JourneyService {
         return TemplateResponse.from(template);
     }
 
-    @Transactional
     public TemplateResponse updateTemplate(Long templateId, TemplateCreateRequest request) {
         JourneyTemplate template = findTemplateOrThrow(templateId);
 
@@ -140,7 +133,6 @@ public class JourneyService {
         return TemplateResponse.from(template);
     }
 
-    @Transactional
     public void deleteTemplate(Long templateId) {
         JourneyTemplate template = findTemplateOrThrow(templateId);
         template.softDelete();
@@ -148,14 +140,12 @@ public class JourneyService {
 
     // ======================== Journey CRUD ========================
 
-    @Transactional
     public JourneyResponse createJourney(JourneyCreateRequest request) {
         Member patient = memberRepository.findById(request.patientId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PATIENT_NOT_FOUND));
 
         JourneyTemplate template = findTemplateOrThrow(request.templateId());
 
-        // Check for active journey
         boolean hasActive = journeyRepository.existsByPatientIdAndStatusIn(
                 request.patientId(),
                 List.of(JourneyStatus.PLANNED, JourneyStatus.IN_PROGRESS)
@@ -174,7 +164,6 @@ public class JourneyService {
                 .notes(request.notes())
                 .build();
 
-        // Convert template items to schedule items
         for (JourneyTemplateItem templateItem : template.getItems()) {
             LocalDate itemDate = request.startDate().plusDays(templateItem.getDayOffset());
             String[] timeParts = templateItem.getTimeOffset().split(":");
@@ -204,11 +193,12 @@ public class JourneyService {
 
     public PageResponse<JourneyListResponse> getJourneys(JourneyStatus status, Long patientId,
                                                           LocalDate startDateFrom, LocalDate startDateTo,
-                                                          Pageable pageable) {
-        Page<JourneyListResponse> page = journeyRepository
-                .findAllByFilters(status, patientId, startDateFrom, startDateTo, pageable)
-                .map(JourneyListResponse::from);
-        return PageResponse.from(page);
+                                                          int page, int size) {
+        List<Journey> journeys = journeyRepository.findAllByFilters(status, patientId, startDateFrom, startDateTo, page, size);
+        long totalElements = journeyRepository.countByFilters(status, patientId, startDateFrom, startDateTo);
+        List<JourneyListResponse> content = journeys.stream().map(JourneyListResponse::from).toList();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        return new PageResponse<>(content, page, size, totalElements, totalPages);
     }
 
     public JourneyDetailResponse getJourneyDetail(Long journeyId, UserPrincipal principal) {
@@ -219,7 +209,6 @@ public class JourneyService {
 
     // ======================== Schedule Item CRUD ========================
 
-    @Transactional
     public ScheduleItemResponse addScheduleItem(Long journeyId, ScheduleItemCreateRequest request) {
         Journey journey = findJourneyOrThrow(journeyId);
 
@@ -243,7 +232,6 @@ public class JourneyService {
         return ScheduleItemResponse.from(item);
     }
 
-    @Transactional
     public ScheduleItemResponse updateScheduleItem(Long journeyId, Long itemId, ScheduleItemUpdateRequest request) {
         JourneyScheduleItem item = findScheduleItemOrThrow(journeyId, itemId);
 
@@ -258,19 +246,17 @@ public class JourneyService {
         return ScheduleItemResponse.from(item);
     }
 
-    @Transactional
     public void deleteScheduleItem(Long journeyId, Long itemId) {
         JourneyScheduleItem item = findScheduleItemOrThrow(journeyId, itemId);
         if (!item.isModifiable()) {
             throw new BusinessException(ErrorCode.SCHEDULE_ITEM_COMPLETED,
                     "이미 진행/완료된 일정은 삭제할 수 없습니다.");
         }
-        scheduleItemRepository.delete(item);
+        scheduleItemRepository.deleteById(item.getId());
     }
 
     // ======================== Staff Assignment ========================
 
-    @Transactional
     public void assignStaff(Long journeyId, StaffAssignRequest request) {
         Journey journey = findJourneyOrThrow(journeyId);
         Member staff = memberRepository.findById(request.staffId())

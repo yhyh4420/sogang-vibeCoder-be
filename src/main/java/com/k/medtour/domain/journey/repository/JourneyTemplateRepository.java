@@ -2,15 +2,17 @@ package com.k.medtour.domain.journey.repository;
 
 import com.k.medtour.domain.journey.entity.JourneyTemplate;
 import com.k.medtour.domain.journey.enums.TemplateCategory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
-public interface JourneyTemplateRepository extends JpaRepository<JourneyTemplate, Long> {
+public interface JourneyTemplateRepository {
+
+    JourneyTemplate save(JourneyTemplate template);
+
+    Optional<JourneyTemplate> findById(Long id);
+
+    void deleteById(Long id);
 
     boolean existsByName(String name);
 
@@ -18,12 +20,7 @@ public interface JourneyTemplateRepository extends JpaRepository<JourneyTemplate
 
     Optional<JourneyTemplate> findByIdAndDeletedAtIsNull(Long id);
 
-    @Query("SELECT t FROM JourneyTemplate t WHERE t.deletedAt IS NULL " +
-            "AND (:keyword IS NULL OR LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-            "AND (:category IS NULL OR t.category = :category)")
-    Page<JourneyTemplate> findAllByFilters(
-            @Param("keyword") String keyword,
-            @Param("category") TemplateCategory category,
-            Pageable pageable
-    );
+    List<JourneyTemplate> findAllByFilters(String keyword, TemplateCategory category, int page, int size);
+
+    long countByFilters(String keyword, TemplateCategory category);
 }

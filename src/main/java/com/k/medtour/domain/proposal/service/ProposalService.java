@@ -20,21 +20,16 @@ import com.k.medtour.global.common.PageResponse;
 import com.k.medtour.global.exception.BusinessException;
 import com.k.medtour.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-@Service
+import java.util.List;
+
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class ProposalService {
 
     private final ProposalRepository proposalRepository;
     private final ProposalRequestRepository proposalRequestRepository;
     private final MemberRepository memberRepository;
 
-    @Transactional
     public ProposalResponse createProposal(ProposalCreateRequest request) {
         memberRepository.findById(request.patientId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
@@ -59,11 +54,12 @@ public class ProposalService {
     }
 
     public PageResponse<ProposalListResponse> getProposals(ProposalStatus status, Long patientId,
-                                                            Pageable pageable) {
-        Page<ProposalListResponse> page = proposalRepository
-                .findAllWithFilters(status, patientId, pageable)
-                .map(ProposalListResponse::from);
-        return PageResponse.from(page);
+                                                            int page, int size) {
+        List<Proposal> proposals = proposalRepository.findAllWithFilters(status, patientId, page, size);
+        long totalElements = proposalRepository.countByFilters(status, patientId);
+        List<ProposalListResponse> content = proposals.stream().map(ProposalListResponse::from).toList();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        return new PageResponse<>(content, page, size, totalElements, totalPages);
     }
 
     public ProposalResponse getProposal(Long proposalId, Long memberId, String role) {
@@ -72,14 +68,12 @@ public class ProposalService {
         return ProposalResponse.from(proposal);
     }
 
-    @Transactional
     public ProposalSendResponse sendProposal(Long proposalId) {
         Proposal proposal = findProposalOrThrow(proposalId);
         proposal.send();
         return ProposalSendResponse.from(proposal);
     }
 
-    @Transactional
     public ProposalRequestResponse createProposalRequest(Long patientId,
                                                           ProposalRequestCreateRequest request) {
         ProposalRequest proposalRequest = ProposalRequest.builder()
@@ -101,14 +95,14 @@ public class ProposalService {
     }
 
     public PageResponse<ProposalListResponse> getMyProposals(Long patientId, ProposalStatus status,
-                                                              Pageable pageable) {
-        Page<ProposalListResponse> page = proposalRepository
-                .findByPatientIdWithFilter(patientId, status, pageable)
-                .map(ProposalListResponse::from);
-        return PageResponse.from(page);
+                                                              int page, int size) {
+        List<Proposal> proposals = proposalRepository.findByPatientIdWithFilter(patientId, status, page, size);
+        long totalElements = proposalRepository.countByPatientIdWithFilter(patientId, status);
+        List<ProposalListResponse> content = proposals.stream().map(ProposalListResponse::from).toList();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        return new PageResponse<>(content, page, size, totalElements, totalPages);
     }
 
-    @Transactional
     public ProposalAcceptResponse acceptProposal(Long proposalId, Long patientId) {
         Proposal proposal = findProposalOrThrow(proposalId);
         validatePatientAccess(proposal, patientId);
@@ -117,7 +111,6 @@ public class ProposalService {
         return ProposalAcceptResponse.from(proposal);
     }
 
-    @Transactional
     public ProposalRejectResponse rejectProposal(Long proposalId, Long patientId) {
         Proposal proposal = findProposalOrThrow(proposalId);
         validatePatientAccess(proposal, patientId);

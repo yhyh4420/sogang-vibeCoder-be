@@ -14,17 +14,13 @@ import com.k.medtour.global.exception.BusinessException;
 import com.k.medtour.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Slf4j
-@Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class AuthService {
 
     private static final int MAGIC_LINK_EXPIRY_MINUTES = 10;
@@ -41,7 +37,6 @@ public class AuthService {
     /**
      * OAuth2 소셜 로그인 처리
      */
-    @Transactional
     public OAuthLoginResponse oauthLogin(String provider, OAuthLoginRequest request) {
         log.info("OAuth 로그인 시도: provider={}", provider);
 
@@ -106,7 +101,6 @@ public class AuthService {
     /**
      * 매직 링크 발급
      */
-    @Transactional
     public MagicLinkResponse createMagicLink(MagicLinkRequest request) {
         log.info("매직 링크 발급 요청: target={}, targetType={}", maskTarget(request.target()), request.targetType());
 
@@ -139,7 +133,6 @@ public class AuthService {
     /**
      * 매직 링크 인증 + 2FA (생년월일)
      */
-    @Transactional
     public MagicLinkVerifyResponse verifyMagicLink(MagicLinkVerifyRequest request) {
         log.info("매직 링크 인증 시도");
 
@@ -194,7 +187,6 @@ public class AuthService {
     /**
      * Refresh Token으로 Access Token 갱신
      */
-    @Transactional
     public TokenResponse refreshToken(String refreshTokenStr) {
         log.info("토큰 갱신 요청");
 
@@ -226,7 +218,6 @@ public class AuthService {
     /**
      * 로그아웃 (Refresh Token 무효화)
      */
-    @Transactional
     public void logout(Long memberId) {
         log.info("로그아웃 요청: memberId={}", memberId);
         refreshTokenRepository.revokeAllByMemberId(memberId);
@@ -236,7 +227,6 @@ public class AuthService {
     /**
      * 약관 동의 처리
      */
-    @Transactional
     public ConsentResponse submitConsent(Long memberId, ConsentRequest request) {
         log.info("약관 동의 요청: memberId={}", memberId);
 
@@ -288,7 +278,6 @@ public class AuthService {
     /**
      * 사용자 역할 변경
      */
-    @Transactional
     public RoleChangeResponse changeUserRole(Long adminId, Long targetUserId, RoleChangeRequest request) {
         log.info("역할 변경 요청: adminId={}, targetUserId={}, newRoleId={}", adminId, targetUserId, request.roleId());
 

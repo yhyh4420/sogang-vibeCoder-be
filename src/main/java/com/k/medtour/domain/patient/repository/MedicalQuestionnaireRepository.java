@@ -1,11 +1,14 @@
 package com.k.medtour.domain.patient.repository;
 
 import com.k.medtour.domain.patient.entity.MedicalQuestionnaire;
-import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface MedicalQuestionnaireRepository extends JpaRepository<MedicalQuestionnaire, Long> {
+public interface MedicalQuestionnaireRepository {
+
+    MedicalQuestionnaire save(MedicalQuestionnaire questionnaire);
+
+    Optional<MedicalQuestionnaire> findById(Long id);
 
     Optional<MedicalQuestionnaire> findByMemberIdAndDeletedAtIsNull(Long memberId);
 

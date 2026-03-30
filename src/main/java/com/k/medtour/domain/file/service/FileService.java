@@ -10,20 +10,18 @@ import com.k.medtour.global.exception.ErrorCode;
 import com.k.medtour.infra.s3.StorageService;
 import com.k.medtour.infra.s3.StorageService.StorageUploadResult;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 
-@Slf4j
-@Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class FileService {
+
+    private static final Logger log = LoggerFactory.getLogger(FileService.class);
 
     private static final long MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
@@ -38,24 +36,24 @@ public class FileService {
     private final FileRepository fileRepository;
     private final StorageService storageService;
 
-    @Transactional
-    public FileUploadResponse upload(MultipartFile file, String categoryStr, Long uploaderId) {
-        validateFileSize(file);
-        validateMimeType(file);
+    public FileUploadResponse upload(InputStream inputStream, String originalName, String contentType,
+                                     long fileSize, String categoryStr, Long uploaderId) {
+        validateFileSize(fileSize);
+        validateMimeType(contentType);
         FileCategory category = parseCategory(categoryStr);
 
-        String originalName = file.getOriginalFilename();
         String extension = extractExtension(originalName);
         String storedName = UUID.randomUUID() + extension;
 
-        StorageUploadResult result = storageService.upload(file, storedName, category.name());
+        StorageUploadResult result = storageService.upload(inputStream, originalName, contentType,
+                fileSize, storedName, category.name());
 
         FileEntity fileEntity = FileEntity.builder()
                 .uploaderId(uploaderId)
                 .originalName(originalName)
                 .storedName(storedName)
-                .mimeType(file.getContentType())
-                .fileSize(file.getSize())
+                .mimeType(contentType)
+                .fileSize(fileSize)
                 .category(category)
                 .s3Key(result.s3Key())
                 .url(result.url())
@@ -82,7 +80,6 @@ public class FileService {
         );
     }
 
-    @Transactional
     public void delete(Long fileId, Long memberId, String role) {
         FileEntity fileEntity = findFileOrThrow(fileId);
 
@@ -100,14 +97,13 @@ public class FileService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
     }
 
-    private void validateFileSize(MultipartFile file) {
-        if (file.getSize() > MAX_FILE_SIZE) {
+    private void validateFileSize(long fileSize) {
+        if (fileSize > MAX_FILE_SIZE) {
             throw new BusinessException(ErrorCode.FILE_SIZE_EXCEEDED);
         }
     }
 
-    private void validateMimeType(MultipartFile file) {
-        String contentType = file.getContentType();
+    private void validateMimeType(String contentType) {
         if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType)) {
             throw new BusinessException(ErrorCode.INVALID_FILE_TYPE);
         }

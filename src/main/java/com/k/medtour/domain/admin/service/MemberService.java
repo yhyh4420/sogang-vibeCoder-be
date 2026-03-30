@@ -11,13 +11,9 @@ import com.k.medtour.global.exception.BusinessException;
 import com.k.medtour.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
-@Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class MemberService {
 
     private final MemberRepository memberRepository;
@@ -39,7 +35,6 @@ public class MemberService {
     /**
      * 실무자 본인 프로필 수정
      */
-    @Transactional
     public StaffProfileResponse updateStaffProfile(Long memberId, StaffProfileUpdateRequest request) {
         log.info("실무자 프로필 수정: memberId={}", memberId);
 
@@ -71,7 +66,6 @@ public class MemberService {
     /**
      * 에이전시 프로필 수정
      */
-    @Transactional
     public AgencyProfileResponse updateAgencyProfile(AgencyProfileUpdateRequest request) {
         log.info("에이전시 프로필 수정 요청");
 

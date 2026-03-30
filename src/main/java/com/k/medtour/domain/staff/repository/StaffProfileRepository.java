@@ -1,16 +1,19 @@
 package com.k.medtour.domain.staff.repository;
 
 import com.k.medtour.domain.staff.entity.StaffProfile;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
-public interface StaffProfileRepository extends JpaRepository<StaffProfile, Long> {
+public interface StaffProfileRepository {
 
-    @Query("SELECT sp FROM StaffProfile sp JOIN FETCH sp.member WHERE sp.member.id = :memberId")
-    Optional<StaffProfile> findByMemberIdWithMember(@Param("memberId") Long memberId);
+    StaffProfile save(StaffProfile staffProfile);
+
+    Optional<StaffProfile> findById(Long id);
+
+    Optional<StaffProfile> findByMemberIdWithMember(Long memberId);
 
     Optional<StaffProfile> findByMemberId(Long memberId);
+
+    List<StaffProfile> findAll();
 }

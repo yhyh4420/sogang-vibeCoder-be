@@ -1,11 +1,14 @@
 package com.k.medtour.domain.aftercare.repository;
 
 import com.k.medtour.domain.aftercare.entity.StaffReport;
-import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface StaffReportRepository extends JpaRepository<StaffReport, Long> {
+public interface StaffReportRepository {
+
+    StaffReport save(StaffReport staffReport);
+
+    Optional<StaffReport> findById(Long id);
 
     boolean existsByJourneyIdAndStaffIdAndDeletedAtIsNull(Long journeyId, Long staffId);
 
