@@ -2,31 +2,24 @@ package com.k.medtour.infra.s3;
 
 import com.k.medtour.global.exception.BusinessException;
 import com.k.medtour.global.exception.ErrorCode;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Primary;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
-@Slf4j
-@Service
-@Profile({"local", "test"})
-@Primary
 public class LocalStorageService implements StorageService {
+
+    private static final Logger log = LoggerFactory.getLogger(LocalStorageService.class);
 
     private final Path uploadDir;
     private final String baseUrl;
 
-    public LocalStorageService(
-            @Value("${file.upload-dir:uploads}") String uploadDir,
-            @Value("${file.base-url:http://localhost:8080/uploads}") String baseUrl) {
+    public LocalStorageService(String uploadDir, String baseUrl) {
         this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
         this.baseUrl = baseUrl;
         createUploadDirectory();
@@ -43,13 +36,14 @@ public class LocalStorageService implements StorageService {
     }
 
     @Override
-    public StorageUploadResult upload(MultipartFile file, String storedName, String category) {
+    public StorageUploadResult upload(InputStream inputStream, String filename, String contentType,
+                                      long size, String storedName, String category) {
         try {
             Path categoryDir = uploadDir.resolve(category.toLowerCase());
             Files.createDirectories(categoryDir);
 
             Path targetPath = categoryDir.resolve(storedName);
-            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
 
             String s3Key = category.toLowerCase() + "/" + storedName;
             String url = baseUrl + "/" + s3Key;

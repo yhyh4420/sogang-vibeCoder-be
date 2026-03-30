@@ -9,14 +9,10 @@ import com.k.medtour.domain.profile.dto.PortfolioResponse;
 import com.k.medtour.global.exception.BusinessException;
 import com.k.medtour.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class ProfileService {
 
     private final AgencyProfileRepository agencyProfileRepository;

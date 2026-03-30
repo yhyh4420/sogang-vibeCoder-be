@@ -17,17 +17,13 @@ import com.k.medtour.domain.journey.repository.JourneyRepository;
 import com.k.medtour.global.exception.BusinessException;
 import com.k.medtour.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-@Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class AftercareService {
 
     private final AftercareGuideRepository guideRepository;
@@ -35,7 +31,6 @@ public class AftercareService {
     private final StaffReportRepository staffReportRepository;
     private final JourneyRepository journeyRepository;
 
-    @Transactional
     public AftercareGuideResponse createGuide(AftercareGuideCreateRequest request) {
         journeyRepository.findByIdAndDeletedAtIsNull(request.journeyId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.JOURNEY_NOT_FOUND));
@@ -60,7 +55,6 @@ public class AftercareService {
         return AftercareGuideResponse.from(guide);
     }
 
-    @Transactional
     public InvoiceResponse createInvoice(InvoiceCreateRequest request) {
         journeyRepository.findByIdAndDeletedAtIsNull(request.journeyId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.JOURNEY_NOT_FOUND));
@@ -118,7 +112,6 @@ public class AftercareService {
                 .toList();
     }
 
-    @Transactional
     public StaffReportResponse createReport(StaffReportCreateRequest request, Long staffId) {
         journeyRepository.findByIdAndDeletedAtIsNull(request.journeyId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.JOURNEY_NOT_FOUND));

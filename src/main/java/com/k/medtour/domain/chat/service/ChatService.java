@@ -28,14 +28,10 @@ import com.k.medtour.global.exception.BusinessException;
 import com.k.medtour.global.exception.ErrorCode;
 import com.k.medtour.infra.translation.TranslationService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,11 +39,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Slf4j
-@Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class ChatService {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatService.class);
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomParticipantRepository participantRepository;
@@ -59,7 +54,6 @@ public class ChatService {
     /**
      * 채팅방 생성
      */
-    @Transactional
     public ChatRoomResponse createRoom(ChatRoomCreateRequest request) {
         List<Long> participantIds = request.participants().stream()
                 .map(ChatRoomCreateRequest.ParticipantInfo::userId)
@@ -109,16 +103,15 @@ public class ChatService {
      */
     public List<ChatRoomListResponse> getMyRooms(Long memberId, ChatRoomType type,
                                                   int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ChatRoom> rooms;
+        List<ChatRoom> rooms;
 
         if (type != null) {
-            rooms = chatRoomRepository.findAllByParticipantMemberIdAndType(memberId, type, pageable);
+            rooms = chatRoomRepository.findAllByParticipantMemberIdAndType(memberId, type, page, size);
         } else {
-            rooms = chatRoomRepository.findAllByParticipantMemberId(memberId, pageable);
+            rooms = chatRoomRepository.findAllByParticipantMemberId(memberId, page, size);
         }
 
-        return rooms.getContent().stream()
+        return rooms.stream()
                 .map(room -> toChatRoomListResponse(room, memberId))
                 .toList();
     }
@@ -130,13 +123,12 @@ public class ChatService {
                                                 Long memberId, String role) {
         validateParticipantOrAdmin(roomId, memberId, role);
 
-        Pageable pageable = PageRequest.of(0, size + 1);
         List<ChatMessage> messages;
 
         if (cursor != null && !cursor.isBlank()) {
-            messages = messageRepository.findByRoomIdAndCursorOrderBySentAtDesc(roomId, cursor, pageable);
+            messages = messageRepository.findByRoomIdAndCursorOrderBySentAtDesc(roomId, cursor, size + 1);
         } else {
-            messages = messageRepository.findByRoomIdOrderBySentAtDesc(roomId, pageable);
+            messages = messageRepository.findByRoomIdOrderBySentAtDesc(roomId, size + 1);
         }
 
         boolean hasMore = messages.size() > size;
@@ -158,7 +150,6 @@ public class ChatService {
     /**
      * 텍스트 메시지 전송
      */
-    @Transactional
     public ChatMessageResponse sendMessage(String roomId, ChatMessageSendRequest request,
                                            Long senderId, String senderRole) {
         validateParticipantOrAdmin(roomId, senderId, senderRole);
@@ -197,8 +188,8 @@ public class ChatService {
     /**
      * 파일 메시지 전송
      */
-    @Transactional
-    public ChatFileMessageResponse sendFileMessage(String roomId, MultipartFile file,
+    public ChatFileMessageResponse sendFileMessage(String roomId, InputStream fileInputStream,
+                                                    String filename, String contentType, long fileSize,
                                                     String caption, Boolean isSecure,
                                                     Long senderId, String senderRole) {
         validateParticipantOrAdmin(roomId, senderId, senderRole);
@@ -209,7 +200,8 @@ public class ChatService {
 
         FileUploadResponse fileUpload;
         try {
-            fileUpload = fileService.upload(file, "CHAT_FILE", senderId);
+            fileUpload = fileService.upload(fileInputStream, filename, contentType, fileSize,
+                    "CHAT_FILE", senderId);
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.CHAT_FILE_ERROR, e.getMessage());
         }
@@ -254,7 +246,6 @@ public class ChatService {
     /**
      * 읽음 처리
      */
-    @Transactional
     public ReadResponse markAsRead(String roomId, ReadRequest request,
                                     Long memberId, String role) {
         validateParticipantOrAdmin(roomId, memberId, role);
@@ -277,21 +268,21 @@ public class ChatService {
      * 관리자 멀티챗 관제 조회
      */
     public MonitorResponse monitorRooms(ChatRoomType type, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ChatRoom> rooms;
+        List<ChatRoom> rooms;
+        long totalRooms;
 
         if (type != null) {
-            rooms = chatRoomRepository.findAllByTypeOrderByUpdatedAtDesc(type, pageable);
+            rooms = chatRoomRepository.findAllByTypeOrderByUpdatedAtDesc(type, page, size);
+            totalRooms = chatRoomRepository.countByType(type);
         } else {
-            rooms = chatRoomRepository.findAllOrderByUpdatedAtDesc(pageable);
+            rooms = chatRoomRepository.findAllOrderByUpdatedAtDesc(page, size);
+            totalRooms = chatRoomRepository.countAll();
         }
 
-        long totalRooms = rooms.getTotalElements();
         long totalUnread = 0;
-
         List<MonitorResponse.MonitorRoomInfo> roomInfos = new ArrayList<>();
 
-        for (ChatRoom room : rooms.getContent()) {
+        for (ChatRoom room : rooms) {
             ChatMessage lastMsg = messageRepository
                     .findTopByChatRoom_RoomIdOrderBySentAtDesc(room.getRoomId())
                     .orElse(null);
@@ -319,15 +310,16 @@ public class ChatService {
             totalUnread += unread;
         }
 
+        int totalPages = (int) Math.ceil((double) totalRooms / size);
+
         return new MonitorResponse(
-                totalRooms, rooms.getNumberOfElements(), totalUnread,
-                roomInfos, page, size, rooms.getTotalElements(), rooms.getTotalPages());
+                totalRooms, rooms.size(), totalUnread,
+                roomInfos, page, size, totalRooms, totalPages);
     }
 
     /**
      * 긴급 호출 (SOS)
      */
-    @Transactional
     public SosResponse sendSos(SosRequest request, Long senderId, String senderRole) {
         String roomId = request.roomId();
         ChatRoom chatRoom;

@@ -1,17 +1,13 @@
 package com.k.medtour.domain.journey.dto;
 
 import com.k.medtour.domain.journey.enums.TemplateCategory;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 
 import java.util.List;
 
 public record TemplateCreateRequest(
-        @NotBlank String name,
-        @NotNull TemplateCategory category,
-        @NotNull @Positive Integer durationDays,
-        @Valid List<TemplateItemDto> items
+        String name,
+        TemplateCategory category,
+        Integer durationDays,
+        List<TemplateItemDto> items
 ) {
 }

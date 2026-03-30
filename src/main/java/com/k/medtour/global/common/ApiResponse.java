@@ -1,9 +1,7 @@
 package com.k.medtour.global.common;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.k.medtour.global.exception.ErrorCode;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(
         boolean success,
         String message,

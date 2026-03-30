@@ -1,16 +1,15 @@
 package com.k.medtour.domain.admin.repository;
 
 import com.k.medtour.domain.admin.entity.Member;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-
+import java.util.List;
 import java.util.Optional;
 
-public interface MemberRepository extends JpaRepository<Member, Long> {
+public interface MemberRepository {
+
+    Member save(Member member);
+
+    Optional<Member> findById(Long id);
 
     Optional<Member> findByEmail(String email);
 
@@ -18,12 +17,11 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     boolean existsByEmail(String email);
 
-    @Query("SELECT m FROM Member m JOIN FETCH m.role WHERE m.id = :id")
-    Optional<Member> findByIdWithRole(@Param("id") Long id);
+    Optional<Member> findByIdWithRole(Long id);
 
-    @Query("SELECT m FROM Member m JOIN FETCH m.role WHERE m.email = :email")
-    Optional<Member> findByEmailWithRole(@Param("email") String email);
+    Optional<Member> findByEmailWithRole(String email);
 
-    @Query("SELECT m FROM Member m WHERE m.role.name = :roleName AND m.deletedAt IS NULL")
-    Page<Member> findAllByRoleName(@Param("roleName") String roleName, Pageable pageable);
+    List<Member> findAllByRoleName(String roleName, int page, int size);
+
+    long countByRoleName(String roleName);
 }

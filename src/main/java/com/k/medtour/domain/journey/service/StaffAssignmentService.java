@@ -25,8 +25,6 @@ import com.k.medtour.domain.staff.repository.StaffProfileRepository;
 import com.k.medtour.global.exception.BusinessException;
 import com.k.medtour.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -34,9 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class StaffAssignmentService {
 
     private final StaffAssignmentRepository staffAssignmentRepository;
@@ -142,7 +138,6 @@ public class StaffAssignmentService {
 
     // ======================== Status Update ========================
 
-    @Transactional
     public StatusUpdateResponse updateStatus(Long journeyId, Long itemId, Long staffId,
                                               StatusUpdateRequest request) {
         // Verify staff assignment

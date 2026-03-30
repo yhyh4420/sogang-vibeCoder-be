@@ -16,20 +16,14 @@ import com.k.medtour.domain.patient.repository.EmergencyContactRepository;
 import com.k.medtour.domain.patient.repository.MedicalQuestionnaireRepository;
 import com.k.medtour.domain.patient.repository.PatientPassportRepository;
 import com.k.medtour.global.auth.UserPrincipal;
+import com.k.medtour.global.common.PageResponse;
 import com.k.medtour.global.exception.BusinessException;
 import com.k.medtour.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class PatientService {
 
     private final PatientPassportRepository passportRepository;
@@ -39,9 +33,7 @@ public class PatientService {
 
     // ========== Passport ==========
 
-    @Transactional
-    public PassportResponse createPassport(PassportRequest request) {
-        Long memberId = getCurrentMemberId();
+    public PassportResponse createPassport(PassportRequest request, Long memberId) {
         if (passportRepository.existsByMemberIdAndDeletedAtIsNull(memberId)) {
             throw new BusinessException(ErrorCode.PASSPORT_ALREADY_EXISTS);
         }
@@ -64,15 +56,12 @@ public class PatientService {
     }
 
     public PassportResponse getPassport(Long patientId) {
-        validateAccess(patientId);
         PatientPassport passport = passportRepository.findByMemberIdAndDeletedAtIsNull(patientId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PASSPORT_NOT_FOUND));
         return PassportResponse.from(passport);
     }
 
-    @Transactional
-    public PassportResponse updatePassport(PassportRequest request) {
-        Long memberId = getCurrentMemberId();
+    public PassportResponse updatePassport(PassportRequest request, Long memberId) {
         PatientPassport passport = passportRepository.findByMemberIdAndDeletedAtIsNull(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PASSPORT_NOT_FOUND));
 
@@ -87,9 +76,7 @@ public class PatientService {
 
     // ========== Medical Questionnaire ==========
 
-    @Transactional
-    public QuestionnaireResponse createQuestionnaire(QuestionnaireRequest request) {
-        Long memberId = getCurrentMemberId();
+    public QuestionnaireResponse createQuestionnaire(QuestionnaireRequest request, Long memberId) {
         if (questionnaireRepository.existsByMemberIdAndDeletedAtIsNull(memberId)) {
             throw new BusinessException(ErrorCode.QUESTIONNAIRE_ALREADY_EXISTS);
         }
@@ -111,16 +98,13 @@ public class PatientService {
     }
 
     public QuestionnaireResponse getQuestionnaire(Long patientId) {
-        validateAccess(patientId);
         MedicalQuestionnaire questionnaire = questionnaireRepository
                 .findByMemberIdAndDeletedAtIsNull(patientId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTIONNAIRE_NOT_FOUND));
         return QuestionnaireResponse.from(questionnaire);
     }
 
-    @Transactional
-    public QuestionnaireResponse updateQuestionnaire(QuestionnaireRequest request) {
-        Long memberId = getCurrentMemberId();
+    public QuestionnaireResponse updateQuestionnaire(QuestionnaireRequest request, Long memberId) {
         MedicalQuestionnaire questionnaire = questionnaireRepository
                 .findByMemberIdAndDeletedAtIsNull(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTIONNAIRE_NOT_FOUND));
@@ -137,9 +121,7 @@ public class PatientService {
 
     // ========== Emergency Contact ==========
 
-    @Transactional
-    public EmergencyContactResponse createEmergencyContact(EmergencyContactRequest request) {
-        Long memberId = getCurrentMemberId();
+    public EmergencyContactResponse createEmergencyContact(EmergencyContactRequest request, Long memberId) {
         Member member = findMember(memberId);
 
         EmergencyContact contact = EmergencyContact.builder()
@@ -155,17 +137,15 @@ public class PatientService {
     }
 
     public List<EmergencyContactResponse> getEmergencyContacts(Long patientId) {
-        validateAccess(patientId);
         return emergencyContactRepository.findAllByMemberIdAndDeletedAtIsNull(patientId)
                 .stream()
                 .map(EmergencyContactResponse::from)
                 .toList();
     }
 
-    @Transactional
     public EmergencyContactResponse updateEmergencyContact(Long contactId,
-                                                            EmergencyContactRequest request) {
-        Long memberId = getCurrentMemberId();
+                                                            EmergencyContactRequest request,
+                                                            Long memberId) {
         EmergencyContact contact = emergencyContactRepository
                 .findByIdAndMemberIdAndDeletedAtIsNull(contactId, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.EMERGENCY_CONTACT_NOT_FOUND));
@@ -176,9 +156,7 @@ public class PatientService {
         return EmergencyContactResponse.from(contact);
     }
 
-    @Transactional
-    public void deleteEmergencyContact(Long contactId) {
-        Long memberId = getCurrentMemberId();
+    public void deleteEmergencyContact(Long contactId, Long memberId) {
         EmergencyContact contact = emergencyContactRepository
                 .findByIdAndMemberIdAndDeletedAtIsNull(contactId, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.EMERGENCY_CONTACT_NOT_FOUND));
@@ -188,41 +166,21 @@ public class PatientService {
 
     // ========== Admin ==========
 
-    public Page<PatientListResponse> getPatientList(Pageable pageable) {
-        Page<Member> members = memberRepository.findAllByRoleName("PATIENT", pageable);
-        return members.map(member -> {
+    public PageResponse<PatientListResponse> getPatientList(int page, int size) {
+        List<Member> members = memberRepository.findAllByRoleName("PATIENT", page, size);
+        long totalElements = memberRepository.countByRoleName("PATIENT");
+        List<PatientListResponse> content = members.stream().map(member -> {
             boolean hasPassport = passportRepository.existsByMemberIdAndDeletedAtIsNull(member.getId());
             boolean hasQuestionnaire = questionnaireRepository.existsByMemberIdAndDeletedAtIsNull(member.getId());
             int contactCount = emergencyContactRepository
                     .findAllByMemberIdAndDeletedAtIsNull(member.getId()).size();
             return PatientListResponse.of(member, hasPassport, hasQuestionnaire, contactCount);
-        });
+        }).toList();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        return new PageResponse<>(content, page, size, totalElements, totalPages);
     }
 
     // ========== Helper ==========
-
-    private Long getCurrentMemberId() {
-        UserPrincipal principal = (UserPrincipal) SecurityContextHolder.getContext()
-                .getAuthentication().getPrincipal();
-        return principal.memberId();
-    }
-
-    private String getCurrentRole() {
-        UserPrincipal principal = (UserPrincipal) SecurityContextHolder.getContext()
-                .getAuthentication().getPrincipal();
-        return principal.role();
-    }
-
-    private void validateAccess(Long targetMemberId) {
-        String role = getCurrentRole();
-        if ("ADMIN".equals(role) || "MASTER".equals(role)) {
-            return;
-        }
-        Long currentMemberId = getCurrentMemberId();
-        if (!currentMemberId.equals(targetMemberId)) {
-            throw new BusinessException(ErrorCode.PATIENT_ACCESS_DENIED);
-        }
-    }
 
     private Member findMember(Long memberId) {
         return memberRepository.findById(memberId)

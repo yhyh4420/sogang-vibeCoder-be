@@ -2,7 +2,6 @@ package com.k.medtour.domain.admin.service;
 
 import com.k.medtour.domain.admin.dto.DashboardOverviewResponse;
 import com.k.medtour.domain.admin.dto.StaffStatusResponse;
-import com.k.medtour.domain.admin.entity.Member;
 import com.k.medtour.domain.admin.repository.MemberRepository;
 import com.k.medtour.domain.chat.repository.ChatMessageRepository;
 import com.k.medtour.domain.journey.entity.StaffAssignment;
@@ -14,18 +13,13 @@ import com.k.medtour.domain.journey.repository.StaffAssignmentRepository;
 import com.k.medtour.domain.staff.entity.StaffProfile;
 import com.k.medtour.domain.staff.repository.StaffProfileRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
-@Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class DashboardService {
 
     private final MemberRepository memberRepository;
@@ -36,12 +30,10 @@ public class DashboardService {
     private final ChatMessageRepository chatMessageRepository;
 
     public DashboardOverviewResponse getOverview() {
-        long totalPatients = memberRepository.findAllByRoleName("PATIENT", PageRequest.of(0, 1))
-                .getTotalElements();
+        long totalPatients = memberRepository.countByRoleName("PATIENT");
 
-        long activeJourneys = journeyRepository.findAllByFilters(
-                JourneyStatus.IN_PROGRESS, null, null, null, PageRequest.of(0, 1)
-        ).getTotalElements();
+        long activeJourneys = journeyRepository.countByFilters(
+                JourneyStatus.IN_PROGRESS, null, null, null);
 
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);

@@ -4,14 +4,6 @@ import com.k.medtour.domain.proposal.enums.ProposalStatus;
 import com.k.medtour.global.common.BaseEntity;
 import com.k.medtour.global.exception.BusinessException;
 import com.k.medtour.global.exception.ErrorCode;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,51 +15,48 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "proposal")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Proposal extends BaseEntity {
 
-    @Column(name = "patient_id", nullable = false)
+
     private Long patientId;
 
-    @Column(name = "title", nullable = false, length = 200)
+
     private String title;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+
+
     private ProposalStatus status;
 
-    @Column(name = "currency", nullable = false, length = 10)
+
     private String currency;
 
-    @Column(name = "subtotal", precision = 15, scale = 2)
+
     private BigDecimal subtotal;
 
-    @Column(name = "discount_rate", precision = 5, scale = 2)
+
     private BigDecimal discountRate;
 
-    @Column(name = "discount_amount", precision = 15, scale = 2)
+
     private BigDecimal discountAmount;
 
-    @Column(name = "total_amount", precision = 15, scale = 2)
+
     private BigDecimal totalAmount;
 
-    @Column(name = "valid_until")
+
     private LocalDateTime validUntil;
 
-    @Column(name = "notes", columnDefinition = "TEXT")
+
     private String notes;
 
-    @Column(name = "sent_at")
+
     private LocalDateTime sentAt;
 
-    @Column(name = "responded_at")
+
     private LocalDateTime respondedAt;
 
-    @OneToMany(mappedBy = "proposal", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("id ASC")
+
     private List<ProposalItem> items = new ArrayList<>();
 
     @Builder

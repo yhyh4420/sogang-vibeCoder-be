@@ -1,11 +1,17 @@
 package com.k.medtour.domain.admin.repository;
 
 import com.k.medtour.domain.admin.entity.AgencyProfile;
-import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
-public interface AgencyProfileRepository extends JpaRepository<AgencyProfile, Long> {
+public interface AgencyProfileRepository {
+
+    AgencyProfile save(AgencyProfile agencyProfile);
+
+    Optional<AgencyProfile> findById(Long id);
 
     Optional<AgencyProfile> findByLicenseNumber(String licenseNumber);
+
+    List<AgencyProfile> findAll();
 }
