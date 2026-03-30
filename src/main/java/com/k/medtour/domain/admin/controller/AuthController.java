@@ -4,6 +4,7 @@ import com.k.medtour.domain.admin.dto.*;
 import com.k.medtour.domain.admin.service.AuthService;
 import com.k.medtour.global.auth.UserPrincipal;
 import com.k.medtour.global.common.ApiResponse;
+import com.k.medtour.server.Router;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -12,6 +13,26 @@ import java.util.List;
 public class AuthController {
 
     private final AuthService authService;
+
+    public void register(Router router) {
+        router.post("/api/v1/auth/oauth/{provider}", ctx -> {
+            String provider = ctx.pathParam("provider");
+            var request = ctx.body(OAuthLoginRequest.class);
+            return oauthLogin(provider, request);
+        });
+        router.post("/api/v1/auth/magic-link", ctx -> createMagicLink(ctx.body(MagicLinkRequest.class)));
+        router.post("/api/v1/auth/magic-link/verify", ctx -> verifyMagicLink(ctx.body(MagicLinkVerifyRequest.class)));
+        router.post("/api/v1/auth/refresh", ctx -> {
+            var body = ctx.body(java.util.Map.class);
+            return refresh((String) body.get("refreshToken"));
+        });
+        router.post("/api/v1/auth/logout", ctx -> logout(ctx.userPrincipal()));
+        router.post("/api/v1/auth/consent", ctx -> submitConsent(ctx.userPrincipal(), ctx.body(ConsentRequest.class)));
+        router.get("/api/v1/auth/consent", ctx -> getConsent(ctx.userPrincipal()));
+        router.get("/api/v1/auth/roles", ctx -> getRoles());
+        router.put("/api/v1/auth/users/{userId}/role", ctx -> changeUserRole(
+                ctx.userPrincipal(), ctx.pathParamAsLong("userId"), ctx.body(RoleChangeRequest.class)));
+    }
 
     /**
      * OAuth2 소셜 로그인

@@ -5,6 +5,7 @@ import com.k.medtour.domain.file.dto.FileUploadResponse;
 import com.k.medtour.domain.file.service.FileService;
 import com.k.medtour.global.auth.UserPrincipal;
 import com.k.medtour.global.common.ApiResponse;
+import com.k.medtour.server.Router;
 import lombok.RequiredArgsConstructor;
 
 import java.io.InputStream;
@@ -13,6 +14,16 @@ import java.io.InputStream;
 public class FileController {
 
     private final FileService fileService;
+
+    public void register(Router router) {
+        // File upload requires multipart handling -- simplified for MVP
+        router.post("/api/v1/files", ctx -> {
+            // MVP: accept JSON with base64 or just metadata
+            return ApiResponse.success("파일 업로드는 multipart 처리가 필요합니다.", null);
+        });
+        router.get("/api/v1/files/{fileId}/download", ctx -> getDownloadUrl(ctx.pathParamAsLong("fileId")));
+        router.delete("/api/v1/files/{fileId}", ctx -> delete(ctx.pathParamAsLong("fileId"), ctx.userPrincipal()));
+    }
 
     public ApiResponse<FileUploadResponse> upload(
             InputStream inputStream,

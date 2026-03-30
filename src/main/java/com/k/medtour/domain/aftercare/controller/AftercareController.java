@@ -9,6 +9,7 @@ import com.k.medtour.domain.aftercare.dto.StaffReportResponse;
 import com.k.medtour.domain.aftercare.service.AftercareService;
 import com.k.medtour.global.auth.UserPrincipal;
 import com.k.medtour.global.common.ApiResponse;
+import com.k.medtour.server.Router;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -17,6 +18,15 @@ import java.util.List;
 public class AftercareController {
 
     private final AftercareService aftercareService;
+
+    public void register(Router router) {
+        router.post("/api/v1/aftercare/guides", ctx -> createGuide(ctx.body(AftercareGuideCreateRequest.class)));
+        router.get("/api/v1/aftercare/guides/{journeyId}", ctx -> getGuide(ctx.pathParamAsLong("journeyId")));
+        router.post("/api/v1/aftercare/invoices", ctx -> createInvoice(ctx.body(InvoiceCreateRequest.class)));
+        router.get("/api/v1/aftercare/invoices/{journeyId}", ctx -> getInvoice(ctx.pathParamAsLong("journeyId")));
+        router.get("/api/v1/aftercare/invoices/me", ctx -> getMyInvoices(ctx.userPrincipal()));
+        router.post("/api/v1/aftercare/reports", ctx -> createReport(ctx.body(StaffReportCreateRequest.class), ctx.userPrincipal()));
+    }
 
     /**
      * 사후 관리 가이드 생성 (ADMIN)

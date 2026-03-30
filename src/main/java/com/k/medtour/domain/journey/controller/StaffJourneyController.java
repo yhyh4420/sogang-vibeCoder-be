@@ -8,6 +8,7 @@ import com.k.medtour.domain.journey.dto.StatusUpdateResponse;
 import com.k.medtour.domain.journey.service.StaffAssignmentService;
 import com.k.medtour.global.auth.UserPrincipal;
 import com.k.medtour.global.common.ApiResponse;
+import com.k.medtour.server.Router;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
@@ -16,6 +17,22 @@ import java.time.LocalDate;
 public class StaffJourneyController {
 
     private final StaffAssignmentService staffAssignmentService;
+
+    public void register(Router router) {
+        router.get("/api/v1/staff/today", ctx -> {
+            String dateStr = ctx.queryParam("date");
+            LocalDate date = dateStr != null ? LocalDate.parse(dateStr) : null;
+            return getTodayTasks(ctx.userPrincipal(), date);
+        });
+        router.get("/api/v1/staff/journeys/{journeyId}/notice", ctx -> getPatientNotice(
+                ctx.pathParamAsLong("journeyId"), ctx.userPrincipal()));
+        router.post("/api/v1/staff/journeys/{journeyId}/items/{itemId}/status", ctx -> updateStatus(
+                ctx.pathParamAsLong("journeyId"), ctx.pathParamAsLong("itemId"),
+                ctx.userPrincipal(), ctx.body(StatusUpdateRequest.class)));
+        router.get("/api/v1/staff/journeys/{journeyId}/items/{itemId}/navigation", ctx -> getNavigation(
+                ctx.pathParamAsLong("journeyId"), ctx.pathParamAsLong("itemId"),
+                ctx.queryParam("platform", "google")));
+    }
 
     public ApiResponse<StaffTodayResponse> getTodayTasks(
             UserPrincipal principal,

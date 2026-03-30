@@ -16,6 +16,7 @@ import com.k.medtour.domain.chat.enums.ChatRoomType;
 import com.k.medtour.domain.chat.service.ChatService;
 import com.k.medtour.global.auth.UserPrincipal;
 import com.k.medtour.global.common.ApiResponse;
+import com.k.medtour.server.Router;
 import lombok.RequiredArgsConstructor;
 
 import java.io.InputStream;
@@ -25,6 +26,32 @@ import java.util.List;
 public class ChatController {
 
     private final ChatService chatService;
+
+    public void register(Router router) {
+        router.post("/api/v1/chat/rooms", ctx -> createRoom(ctx.body(ChatRoomCreateRequest.class)));
+        router.get("/api/v1/chat/rooms", ctx -> {
+            String typeStr = ctx.queryParam("type");
+            ChatRoomType type = typeStr != null ? ChatRoomType.valueOf(typeStr) : null;
+            return getMyRooms(ctx.userPrincipal(), type,
+                    ctx.queryParamAsInt("page", 0), ctx.queryParamAsInt("size", 20));
+        });
+        router.get("/api/v1/chat/rooms/{roomId}/messages", ctx -> getMessages(
+                ctx.pathParam("roomId"), ctx.queryParam("cursor"),
+                ctx.queryParamAsInt("size", 50), ctx.userPrincipal()));
+        router.post("/api/v1/chat/rooms/{roomId}/messages", ctx -> sendMessage(
+                ctx.pathParam("roomId"), ctx.body(ChatMessageSendRequest.class), ctx.userPrincipal()));
+        // File message upload is simplified for MVP
+        router.post("/api/v1/chat/rooms/{roomId}/messages/file", ctx ->
+                ApiResponse.success("파일 메시지 전송은 multipart 처리가 필요합니다.", null));
+        router.post("/api/v1/chat/rooms/{roomId}/read", ctx -> markAsRead(
+                ctx.pathParam("roomId"), ctx.body(ReadRequest.class), ctx.userPrincipal()));
+        router.get("/api/v1/chat/monitor", ctx -> {
+            String typeStr = ctx.queryParam("type");
+            ChatRoomType type = typeStr != null ? ChatRoomType.valueOf(typeStr) : null;
+            return monitorRooms(type, ctx.queryParamAsInt("page", 0), ctx.queryParamAsInt("size", 20));
+        });
+        router.post("/api/v1/chat/sos", ctx -> sendSos(ctx.body(SosRequest.class), ctx.userPrincipal()));
+    }
 
     /**
      * 채팅방 생성

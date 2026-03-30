@@ -4,12 +4,18 @@ import com.k.medtour.domain.admin.dto.DashboardOverviewResponse;
 import com.k.medtour.domain.admin.dto.StaffStatusResponse;
 import com.k.medtour.domain.admin.service.DashboardService;
 import com.k.medtour.global.common.ApiResponse;
+import com.k.medtour.server.Router;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class DashboardController {
 
     private final DashboardService dashboardService;
+
+    public void register(Router router) {
+        router.get("/api/v1/dashboard/overview", ctx -> getOverview());
+        router.get("/api/v1/dashboard/staff-status", ctx -> getStaffStatus());
+    }
 
     /**
      * 운영 현황 요약 (Overview)

@@ -11,6 +11,7 @@ import com.k.medtour.domain.patient.service.PatientService;
 import com.k.medtour.global.auth.UserPrincipal;
 import com.k.medtour.global.common.ApiResponse;
 import com.k.medtour.global.common.PageResponse;
+import com.k.medtour.server.Router;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -19,6 +20,23 @@ import java.util.List;
 public class PatientController {
 
     private final PatientService patientService;
+
+    public void register(Router router) {
+        router.post("/api/v1/patients/passport", ctx -> createPassport(ctx.body(PassportRequest.class), ctx.userPrincipal()));
+        router.get("/api/v1/patients/{patientId}/passport", ctx -> getPassport(ctx.pathParamAsLong("patientId")));
+        router.put("/api/v1/patients/passport", ctx -> updatePassport(ctx.body(PassportRequest.class), ctx.userPrincipal()));
+        router.post("/api/v1/patients/questionnaire", ctx -> createQuestionnaire(ctx.body(QuestionnaireRequest.class), ctx.userPrincipal()));
+        router.get("/api/v1/patients/{patientId}/questionnaire", ctx -> getQuestionnaire(ctx.pathParamAsLong("patientId")));
+        router.put("/api/v1/patients/questionnaire", ctx -> updateQuestionnaire(ctx.body(QuestionnaireRequest.class), ctx.userPrincipal()));
+        router.post("/api/v1/patients/emergency-contacts", ctx -> createEmergencyContact(ctx.body(EmergencyContactRequest.class), ctx.userPrincipal()));
+        router.get("/api/v1/patients/{patientId}/emergency-contacts", ctx -> getEmergencyContacts(ctx.pathParamAsLong("patientId")));
+        router.put("/api/v1/patients/emergency-contacts/{contactId}", ctx -> updateEmergencyContact(
+                ctx.pathParamAsLong("contactId"), ctx.body(EmergencyContactRequest.class), ctx.userPrincipal()));
+        router.delete("/api/v1/patients/emergency-contacts/{contactId}", ctx -> deleteEmergencyContact(
+                ctx.pathParamAsLong("contactId"), ctx.userPrincipal()));
+        router.get("/api/v1/admin/patients", ctx -> getPatientList(
+                ctx.queryParamAsInt("page", 0), ctx.queryParamAsInt("size", 20)));
+    }
 
     // ========== Passport ==========
 

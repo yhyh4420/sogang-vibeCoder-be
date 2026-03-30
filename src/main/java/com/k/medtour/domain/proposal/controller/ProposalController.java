@@ -13,12 +13,33 @@ import com.k.medtour.domain.proposal.service.ProposalService;
 import com.k.medtour.global.auth.UserPrincipal;
 import com.k.medtour.global.common.ApiResponse;
 import com.k.medtour.global.common.PageResponse;
+import com.k.medtour.server.Router;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class ProposalController {
 
     private final ProposalService proposalService;
+
+    public void register(Router router) {
+        router.post("/api/v1/proposals", ctx -> createProposal(ctx.body(ProposalCreateRequest.class)));
+        router.get("/api/v1/proposals", ctx -> {
+            String statusStr = ctx.queryParam("status");
+            ProposalStatus status = statusStr != null ? ProposalStatus.valueOf(statusStr) : null;
+            return getProposals(status, ctx.queryParamAsLong("patientId"),
+                    ctx.queryParamAsInt("page", 0), ctx.queryParamAsInt("size", 20));
+        });
+        router.get("/api/v1/proposals/{proposalId}", ctx -> getProposal(ctx.pathParamAsLong("proposalId"), ctx.userPrincipal()));
+        router.post("/api/v1/proposals/{proposalId}/send", ctx -> sendProposal(ctx.pathParamAsLong("proposalId")));
+        router.post("/api/v1/proposals/request", ctx -> createProposalRequest(ctx.body(ProposalRequestCreateRequest.class), ctx.userPrincipal()));
+        router.get("/api/v1/proposals/me", ctx -> {
+            String statusStr = ctx.queryParam("status");
+            ProposalStatus status = statusStr != null ? ProposalStatus.valueOf(statusStr) : null;
+            return getMyProposals(status, ctx.queryParamAsInt("page", 0), ctx.queryParamAsInt("size", 20), ctx.userPrincipal());
+        });
+        router.post("/api/v1/proposals/{proposalId}/accept", ctx -> acceptProposal(ctx.pathParamAsLong("proposalId"), ctx.userPrincipal()));
+        router.post("/api/v1/proposals/{proposalId}/reject", ctx -> rejectProposal(ctx.pathParamAsLong("proposalId"), ctx.userPrincipal()));
+    }
 
     public ApiResponse<ProposalResponse> createProposal(
             ProposalCreateRequest request) {

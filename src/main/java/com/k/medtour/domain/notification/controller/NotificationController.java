@@ -7,6 +7,7 @@ import com.k.medtour.domain.notification.service.NotificationService;
 import com.k.medtour.global.auth.UserPrincipal;
 import com.k.medtour.global.common.ApiResponse;
 import com.k.medtour.global.common.PageResponse;
+import com.k.medtour.server.Router;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -15,6 +16,17 @@ import java.util.List;
 public class NotificationController {
 
     private final NotificationService notificationService;
+
+    public void register(Router router) {
+        router.get("/api/v1/notifications", ctx -> getMyNotifications(
+                ctx.userPrincipal(), ctx.queryParamAsInt("page", 0), ctx.queryParamAsInt("size", 20)));
+        router.patch("/api/v1/notifications/{id}/read", ctx -> markAsRead(ctx.pathParamAsLong("id"), ctx.userPrincipal()));
+        router.post("/api/v1/notifications/read-all", ctx -> markAllAsRead(ctx.userPrincipal()));
+        router.get("/api/v1/notifications/unread-count", ctx -> getUnreadCount(ctx.userPrincipal()));
+        router.get("/api/v1/admin/alerts", ctx -> getAdminAlerts(
+                ctx.queryParamAsInt("page", 0), ctx.queryParamAsInt("size", 20)));
+        router.post("/api/v1/admin/notifications", ctx -> sendNotification(ctx.body(NotificationSendRequest.class)));
+    }
 
     /**
      * 내 알림 목록 조회 (페이징)
