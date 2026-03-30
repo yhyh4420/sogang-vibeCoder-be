@@ -1,0 +1,26 @@
+[
+  {
+    "timestamp": "21:02:20",
+    "prompt": "브랜치를 분리하자. pure-java라는 브랜치로 main에서 분기해."
+  },
+  {
+    "timestamp": "21:05:38",
+    "prompt": "/ralph-loop:ralph-loop 이 브랜치에서는 기존 스프링 프레임워크를 걷어내고 순수 자바로 바꿀거야. 요구사항은 기존 api 명세서와 동일하며 스프링 프레임워크만 걷어내는 것이 목적이야."
+  },
+  {
+    "timestamp": "21:34:40",
+    "prompt": "다른 세션에서 자바로 바꾸고 있으니까 너는 다른 작업하자. /Users/chang-yehun/Desktop/collage/ai_based_sw_development_method/presentation.html 읽어봐. 이건 springboot일때 발표자료야. 일단 읽어봐"
+  },
+  {
+    "timestamp": "21:36:01",
+    "prompt": "발표자료를 수정해야 해. 수정하기 위해 먼저 다 읽어봐"
+  },
+  {
+    "timestamp": "21:48:54",
+    "prompt": "테스트는?"
+  },
+  {
+    "timestamp": "21:51:12",
+    "prompt": "컨트롤러 테스트만 그런거지? 그러면 그건 다 삭제해"
+  }
+]

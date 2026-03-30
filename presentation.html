@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI만으로 백엔드 구축하기 — Claude Code 실전 리포트</title>
+<style>
+  :root {
+    --blue:    #1a56db;
+    --blue-lt: #e8f0fe;
+    --blue-dk: #0f3ba0;
+    --dark:    #1a1a2e;
+    --gray:    #64748b;
+    --gray-lt: #f1f5f9;
+    --red:     #e63946;
+    --green:   #22c55e;
+    --yellow:  #f59e0b;
+    --white:   #ffffff;
+    --code-bg: #1e1e2e;
+    --code-fg: #cdd6f4;
+    --code-kw: #cba6f7;
+    --code-str:#a6e3a1;
+    --code-cm: #6c7086;
+    --code-fn: #89b4fa;
+    --code-num:#fab387;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
+    background: #0a0a14;
+    overflow: hidden;
+  }
+
+  /* ── Slide container ── */
+  .deck { width: 100vw; height: 100vh; position: relative; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 5% 8%;
+    background: var(--white);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ── Slide number ── */
+  #nav {
+    position: fixed; bottom: 22px; right: 32px;
+    font-size: 13px; color: #94a3b8; z-index: 100;
+    display: flex; gap: 14px; align-items: center;
+  }
+  #nav button {
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+    color: #fff; padding: 4px 12px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; transition: background .15s;
+  }
+  #nav button:hover { background: rgba(255,255,255,.3); }
+  #counter { color: #94a3b8; font-size: 13px; }
+
+  /* ── Progress bar ── */
+  #progress {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: var(--blue); z-index: 200;
+    transition: width .3s ease;
+  }
+
+  /* ── Common layout helpers ── */
+  .slide-header {
+    border-left: 5px solid var(--blue);
+    padding-left: 18px;
+    margin-bottom: 36px;
+  }
+  .slide-header h2 {
+    font-size: clamp(22px, 3vw, 34px);
+    font-weight: 700; color: var(--dark);
+    line-height: 1.2;
+  }
+  .slide-header .sub {
+    font-size: 15px; color: var(--gray); margin-top: 6px;
+  }
+
+  .cols { display: grid; width: 100%; gap: 24px; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .card {
+    background: var(--gray-lt); border-radius: 12px;
+    padding: 20px 22px;
+    border: 1px solid #e2e8f0;
+  }
+  .card h3 { font-size: 15px; color: var(--blue); margin-bottom: 10px; font-weight: 700; }
+  .card p, .card li { font-size: 14px; color: #334155; line-height: 1.7; }
+  .card ul { padding-left: 16px; }
+
+  .stat-box {
+    background: var(--blue); color: white;
+    border-radius: 14px; padding: 22px 20px;
+    text-align: center;
+  }
+  .stat-box .num {
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 800; line-height: 1;
+    display: block;
+  }
+  .stat-box .lbl {
+    font-size: 12px; opacity: .85; margin-top: 6px;
+    display: block; letter-spacing: .5px;
+  }
+
+  .tag {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 20px; font-size: 12px; font-weight: 600;
+    margin: 2px;
+  }
+  .tag-blue   { background: var(--blue-lt); color: var(--blue); }
+  .tag-red    { background: #fee2e2; color: #b91c1c; }
+  .tag-green  { background: #dcfce7; color: #15803d; }
+  .tag-yellow { background: #fef9c3; color: #92400e; }
+  .tag-gray   { background: #f1f5f9; color: #475569; }
+
+  /* ── Code block ── */
+  .code-block {
+    background: var(--code-bg); border-radius: 10px;
+    padding: 18px 20px; font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 12.5px; line-height: 1.65; color: var(--code-fg);
+    overflow-x: auto; width: 100%;
+    box-shadow: 0 4px 24px rgba(0,0,0,.3);
+  }
+  .code-block .kw  { color: var(--code-kw); font-weight: bold; }
+  .code-block .str { color: var(--code-str); }
+  .code-block .cm  { color: var(--code-cm); font-style: italic; }
+  .code-block .fn  { color: var(--code-fn); }
+  .code-block .num { color: var(--code-num); }
+  .code-block .hl  {
+    background: rgba(203,166,247,.15);
+    display: block; border-left: 3px solid var(--code-kw);
+    padding-left: 6px; margin-left: -6px;
+  }
+
+  /* ── Arrow diagram ── */
+  .flow {
+    display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    background: var(--blue); color: white;
+    border-radius: 8px; padding: 10px 16px;
+    font-size: 13px; font-weight: 600;
+    text-align: center; min-width: 90px;
+  }
+  .flow-box.gray  { background: var(--gray); }
+  .flow-box.green { background: #16a34a; }
+  .flow-box.red   { background: var(--red); }
+  .flow-box.yellow{ background: #d97706; }
+  .flow-arrow { color: #94a3b8; font-size: 20px; flex-shrink: 0; }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    background: var(--dark); color: white;
+    padding: 10px 14px; text-align: left;
+    font-weight: 600;
+  }
+  td { padding: 9px 14px; border-bottom: 1px solid #e2e8f0; color: #334155; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  tr:hover td { background: var(--blue-lt); }
+
+  /* ── Highlight callout ── */
+  .callout {
+    border-left: 4px solid var(--blue);
+    background: var(--blue-lt);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    font-size: 14px; color: #1e3a8a;
+    width: 100%;
+  }
+  .callout.red  { border-color: var(--red); background: #fee2e2; color: #7f1d1d; }
+  .callout.green{ border-color: var(--green); background: #dcfce7; color: #14532d; }
+
+  /* ── List ── */
+  .list-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+    font-size: 14px; color: #334155;
+  }
+  .list-item .icon {
+    font-size: 18px; flex-shrink: 0; margin-top: 1px;
+  }
+
+  /* ── Timeline ── */
+  .timeline { width: 100%; }
+  .tl-item {
+    display: grid; grid-template-columns: 90px 24px 1fr;
+    gap: 0 16px; align-items: start; margin-bottom: 12px;
+  }
+  .tl-time { font-size: 13px; font-weight: 700; color: var(--blue); text-align: right; padding-top: 2px; }
+  .tl-dot-col { display: flex; flex-direction: column; align-items: center; }
+  .tl-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--blue); flex-shrink: 0; margin-top: 4px;
+    border: 2px solid white; box-shadow: 0 0 0 2px var(--blue);
+  }
+  .tl-line { flex: 1; width: 2px; background: #cbd5e1; margin-top: 4px; }
+  .tl-content { font-size: 13px; color: #334155; padding-bottom: 4px; }
+  .tl-content strong { color: var(--dark); }
+
+  /* ── Agent tier diagram ── */
+  .tier {
+    width: 100%; border-radius: 12px; padding: 16px 20px;
+    margin-bottom: 10px; display: flex; gap: 16px; align-items: center;
+  }
+  .tier-1 { background: #ede9fe; border: 2px solid #7c3aed; }
+  .tier-2 { background: #dbeafe; border: 2px solid var(--blue); }
+  .tier-3 { background: #dcfce7; border: 2px solid #16a34a; }
+  .tier-badge {
+    font-size: 11px; font-weight: 800; letter-spacing: 1px;
+    padding: 4px 10px; border-radius: 20px; flex-shrink: 0;
+    width: 100px; text-align: center;
+  }
+  .tier-1 .tier-badge { background: #7c3aed; color: white; }
+  .tier-2 .tier-badge { background: var(--blue); color: white; }
+  .tier-3 .tier-badge { background: #16a34a; color: white; }
+  .tier-agents { display: flex; gap: 8px; flex-wrap: wrap; }
+  .agent-chip {
+    background: white; border-radius: 6px; padding: 5px 12px;
+    font-size: 12px; font-weight: 600; color: #1a1a2e;
+    box-shadow: 0 1px 4px rgba(0,0,0,.1);
+  }
+  .tier-arrow { text-align: center; font-size: 20px; color: #94a3b8; margin: 2px 0; }
+  .tier-contract {
+    font-size: 11px; color: #64748b; background: #f8fafc;
+    border-radius: 6px; padding: 3px 10px; border: 1px dashed #cbd5e1;
+    margin-left: auto;
+  }
+
+  /* ── Before/After ── */
+  .ba-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
+  .ba-box { border-radius: 10px; padding: 16px 18px; }
+  .ba-bad  { background: #fff1f2; border: 2px solid #fca5a5; }
+  .ba-good { background: #f0fdf4; border: 2px solid #86efac; }
+  .ba-label { font-size: 12px; font-weight: 700; letter-spacing: .5px; margin-bottom: 10px; }
+  .ba-bad .ba-label  { color: #dc2626; }
+  .ba-good .ba-label { color: #16a34a; }
+  .ba-text { font-size: 13px; color: #334155; line-height: 1.6; font-family: monospace; }
+
+  /* ── Error flow ── */
+  .err-flow {
+    display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: 8px; align-items: center; width: 100%;
+  }
+  .err-box { border-radius: 10px; padding: 14px 16px; }
+  .err-problem { background: #fff1f2; border: 2px solid #fca5a5; }
+  .err-cause   { background: #fef9c3; border: 2px solid #fde047; }
+  .err-fix     { background: #f0fdf4; border: 2px solid #86efac; }
+  .err-label   { font-size: 10px; font-weight: 800; letter-spacing: .5px; margin-bottom: 6px; }
+  .err-problem .err-label { color: #dc2626; }
+  .err-cause   .err-label { color: #92400e; }
+  .err-fix     .err-label { color: #15803d; }
+  .err-content { font-size: 12.5px; color: #334155; line-height: 1.5; }
+  .err-arrow   { font-size: 22px; color: #94a3b8; flex-shrink: 0; }
+
+  /* ── Insight cards ── */
+  .insight-card {
+    background: white; border-radius: 12px;
+    padding: 18px 20px; border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  }
+  .insight-icon { font-size: 28px; margin-bottom: 8px; }
+  .insight-title { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+  .insight-body  { font-size: 13px; color: #475569; line-height: 1.6; }
+
+  /* ── Title slide ── */
+  .slide-title {
+    background: linear-gradient(135deg, var(--dark) 0%, #16213e 50%, #0f3460 100%);
+    color: white;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .slide-title h1 {
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 800; line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  .slide-title h1 span { color: #60a5fa; }
+  .slide-title .subtitle {
+    font-size: clamp(14px, 1.8vw, 20px);
+    color: #94a3b8; margin-bottom: 40px;
+  }
+  .slide-title .meta {
+    font-size: 14px; color: #64748b;
+    border-top: 1px solid rgba(255,255,255,.1);
+    padding-top: 24px; width: 100%;
+    display: flex; gap: 32px;
+  }
+  .slide-title .meta span { display: flex; flex-direction: column; gap: 4px; }
+  .slide-title .meta strong { color: #e2e8f0; font-size: 15px; }
+  .slide-title .badge-row { display: flex; gap: 10px; margin-bottom: 32px; flex-wrap: wrap; }
+  .slide-title .badge {
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+    color: #e2e8f0; padding: 5px 14px; border-radius: 20px; font-size: 13px;
+    font-weight: 600;
+  }
+
+  /* ── Q&A slide ── */
+  .slide-qa {
+    background: linear-gradient(135deg, #0f3460, var(--dark));
+    justify-content: center;
+    align-items: center;
+  }
+  .slide-qa h2 {
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 800; color: white; text-align: center; margin-bottom: 16px;
+  }
+  .slide-qa p {
+    font-size: 18px; color: #94a3b8; text-align: center;
+  }
+
+  /* ── Print ── */
+  @media print {
+    html, body { background: white; overflow: visible; }
+    .deck { height: auto; }
+    #nav, #progress { display: none !important; }
+    .slide {
+      display: flex !important;
+      position: relative !important;
+      page-break-after: always;
+      height: 100vh;
+      padding: 40px 60px;
+    }
+  }
+
+  /* ── Section divider slide ── */
+  .slide-section {
+    background: var(--blue);
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .slide-section .sec-num {
+    font-size: 80px; font-weight: 900;
+    color: rgba(255,255,255,.12); line-height: 1;
+    margin-bottom: -20px;
+  }
+  .slide-section h2 {
+    font-size: clamp(28px, 4vw, 46px);
+    font-weight: 800; color: white; margin-bottom: 12px;
+  }
+  .slide-section p { font-size: 18px; color: rgba(255,255,255,.75); }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div class="deck" id="deck">
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 1 — 표지
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide slide-title active">
+  <div class="badge-row">
+    <span class="badge">Claude Code</span>
+    <span class="badge">Spring Boot 3.x</span>
+    <span class="badge">Java 21</span>
+    <span class="badge">2026-03-28</span>
+  </div>
+  <h1>AI만으로 <span>백엔드</span> 구축하기<br>— Claude Code 실전 리포트</h1>
+  <div class="subtitle">K-Medical Tourism 솔루션 백엔드 개발 사례</div>
+  <div class="meta">
+    <span><strong>과목</strong>AI 기반 소프트웨어 개발 방법론</span>
+    <span><strong>핵심 메시지</strong>올바른 구조와 프롬프트가 있으면 AI는 실제 백엔드를 만든다</span>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 2 — 무엇을 만들었는가
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>무엇을 만들었는가</h2>
+    <div class="sub">K-의료관광 솔루션 백엔드 — B2B / B2C / Staff 3-in-1 API 서버</div>
+  </div>
+
+  <div class="cols cols-3" style="margin-bottom:20px">
+    <div class="card">
+      <h3>🏢 B2B (에이전시)</h3>
+      <ul>
+        <li>환자 여정 통합 관제</li>
+        <li>실무자 자동 배정</li>
+        <li>실시간 모니터링 대시보드</li>
+        <li>스마트 견적서 생성</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🌏 B2C (환자)</h3>
+      <ul>
+        <li>다국어 디지털 컨시어지</li>
+        <li>실시간 일정표 (라이브)</li>
+        <li>1:1 채팅 + 자동 번역</li>
+        <li>사후 관리 가이드</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>👷 Staff (실무자)</h3>
+      <ul>
+        <li>당일 업무 리스트</li>
+        <li>원터치 상태 업데이트</li>
+        <li>환자 특이사항 조회</li>
+        <li>업무 종료 리포트</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    💡 <strong>도메인 범위:</strong> Auth · Member · Patient · Staff · Journey · Chat · Notification · Proposal · File · Dashboard · Aftercare · Profile <strong>— 12개 도메인</strong>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 3 — 전체 규모 (숫자로 보기)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>전체 규모 — 숫자로 보기</h2>
+    <div class="sub">단 하루(약 3시간) 만에 생성된 결과물</div>
+  </div>
+
+  <div class="cols cols-3" style="margin-bottom:20px; width:100%">
+    <div class="stat-box">
+      <span class="num">76</span>
+      <span class="lbl">REST API 엔드포인트</span>
+    </div>
+    <div class="stat-box" style="background:#7c3aed">
+      <span class="num">204</span>
+      <span class="lbl">단위/슬라이스 테스트 (100% PASS)</span>
+    </div>
+    <div class="stat-box" style="background:#16a34a">
+      <span class="num">16,098</span>
+      <span class="lbl">총 코드 라인 (Java)</span>
+    </div>
+  </div>
+
+  <div class="cols cols-3" style="width:100%">
+    <div class="stat-box" style="background:#0f766e; font-size:90%">
+      <span class="num">222</span>
+      <span class="lbl">Java 파일 수</span>
+    </div>
+    <div class="stat-box" style="background:#c2410c; font-size:90%">
+      <span class="num">28</span>
+      <span class="lbl">Entity (DB 테이블)</span>
+    </div>
+    <div class="stat-box" style="background:#1d4ed8; font-size:90%">
+      <span class="num">43/43</span>
+      <span class="lbl">요구사항 달성률 100%</span>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 4 — 기술 스택
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>기술 스택 한눈에 보기</h2>
+    <div class="sub">AI가 선택한 것이 아니라, 사람이 CLAUDE.md에 명세 → AI가 그대로 구현</div>
+  </div>
+
+  <table>
+    <thead><tr><th>영역</th><th>기술</th><th>선택 이유</th></tr></thead>
+    <tbody>
+      <tr><td>Language</td><td><span class="tag tag-blue">Java 21</span></td><td>record, sealed class — AI가 최신 문법 자동 활용</td></tr>
+      <tr><td>Framework</td><td><span class="tag tag-blue">Spring Boot 3.4.4</span></td><td>생태계 + Security 6.x 통합</td></tr>
+      <tr><td>Auth</td><td><span class="tag tag-yellow">JWT</span> <span class="tag tag-yellow">OAuth2</span> <span class="tag tag-yellow">Magic Link</span></td><td>글로벌 VIP 환자 다채널 인증</td></tr>
+      <tr><td>Real-time</td><td><span class="tag tag-red">WebSocket (STOMP)</span> <span class="tag tag-red">SSE</span></td><td>5초 이내 상태 동기화 요구사항</td></tr>
+      <tr><td>Database</td><td><span class="tag tag-green">PostgreSQL 15</span> <span class="tag tag-green">Redis 7</span></td><td>JSONB 활용 (문진표), 세션 캐시</td></tr>
+      <tr><td>Migration</td><td><span class="tag tag-gray">Flyway V1~V8</span></td><td>스프린트별 점진적 스키마 진화</td></tr>
+      <tr><td>i18n</td><td><span class="tag tag-gray">en / zh / ja / ar</span></td><td>글로벌 환자 대상 4개국어</td></tr>
+      <tr><td>Testing</td><td><span class="tag tag-blue">JUnit 5</span> <span class="tag tag-blue">Mockito</span></td><td>Service 단위 + Controller 슬라이스</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 5 — [섹션] AI 개발 프로세스
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide slide-section">
+  <div class="sec-num">02</div>
+  <h2>AI 개발 프로세스</h2>
+  <p>3시간 안에 어떻게 전체 백엔드가 만들어졌는가</p>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 6 — 3시간 타임라인
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>단 하루 3시간 타임라인</h2>
+    <div class="sub">2026-03-28 · 프롬프트 13개로 완성</div>
+  </div>
+
+  <div class="cols cols-2" style="width:100%; gap:32px; align-items:start">
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-time">12:08</div>
+        <div class="tl-dot-col"><div class="tl-dot" style="background:#7c3aed;box-shadow:0 0 0 2px #7c3aed"></div><div class="tl-line"></div></div>
+        <div class="tl-content"><strong>훅 테스트</strong><br>프롬프트 자동 저장 훅 확인</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">12:09</div>
+        <div class="tl-dot-col"><div class="tl-dot" style="background:#7c3aed;box-shadow:0 0 0 2px #7c3aed"></div><div class="tl-line"></div></div>
+        <div class="tl-content"><strong>하네스 엔지니어링 설계</strong><br>Anthropic 문서 URL → 6개 에이전트 + CLAUDE.md 생성</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">12:24</div>
+        <div class="tl-dot-col"><div class="tl-dot"></div><div class="tl-line"></div></div>
+        <div class="tl-content"><strong>아키텍처 + README 생성</strong><br>API 명세서(4,511줄) + 스프린트 플랜</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">12:29</div>
+        <div class="tl-dot-col"><div class="tl-dot" style="background:#16a34a;box-shadow:0 0 0 2px #16a34a"></div><div class="tl-line"></div></div>
+        <div class="tl-content"><strong>Ralph Loop #1 시작</strong><br>Sprint 0~7 순차 구현 (약 1시간)</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">14:06</div>
+        <div class="tl-dot-col"><div class="tl-dot"></div><div class="tl-line"></div></div>
+        <div class="tl-content"><strong>Swagger 일괄 적용 + 훅 자동화</strong><br>모든 Controller에 @Tag, @Operation 추가</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">14:33</div>
+        <div class="tl-dot-col"><div class="tl-dot" style="background:#e63946;box-shadow:0 0 0 2px #e63946"></div><div class="tl-line"></div></div>
+        <div class="tl-content"><strong>Ralph Loop #2 디버깅</strong><br>33개 테스트 실패 + 부팅 에러 → Hotfix 2건</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">14:59</div>
+        <div class="tl-dot-col"><div class="tl-dot"></div><div class="tl-line"></div></div>
+        <div class="tl-content"><strong>README 문서화</strong><br>개발 과정 + Ralph Loop 보고서 + 서버 가이드</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">15:04</div>
+        <div class="tl-dot-col"><div class="tl-dot" style="background:#16a34a;box-shadow:0 0 0 2px #16a34a"></div></div>
+        <div class="tl-content"><strong>main 병합 → MVP v1.0.0 릴리스</strong></div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:12px">
+      <div class="card" style="border-left: 4px solid #7c3aed">
+        <h3>🧑‍💻 사람이 한 것</h3>
+        <ul>
+          <li>도메인 요구사항 43개 작성</li>
+          <li>기술 스택 결정 (CLAUDE.md)</li>
+          <li>API 명세 사전 설계 방향 지시</li>
+          <li>Anthropic 문서 URL 제공</li>
+          <li>Docker 환경 실행</li>
+          <li>최종 main 병합 승인</li>
+        </ul>
+      </div>
+      <div class="card" style="border-left: 4px solid #16a34a">
+        <h3>🤖 AI가 한 것</h3>
+        <ul>
+          <li>에이전트 아키텍처 설계</li>
+          <li>76개 엔드포인트 전체 구현</li>
+          <li>28개 Entity + Flyway V1~V8</li>
+          <li>204개 테스트 작성</li>
+          <li>Gitflow 브랜치 관리 (74 커밋)</li>
+          <li>자동화 훅 2개 설계 및 구현</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 7 — [섹션] 프롬프트 전략
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide slide-section" style="background: linear-gradient(135deg,#1a56db,#7c3aed)">
+  <div class="sec-num">03</div>
+  <h2>프롬프트 전략</h2>
+  <p>AI를 어떻게 작동시켰는가 — 발표의 핵심</p>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 8 — 프롬프트 유형 분류
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>사용한 프롬프트 유형 분류</h2>
+    <div class="sub">총 13개 프롬프트 · 3개 파일 (prompt/20260328_12~15.json)</div>
+  </div>
+
+  <div class="cols cols-3" style="width:100%; margin-bottom:20px">
+    <div class="card" style="border-top:4px solid #7c3aed">
+      <h3>🏗️ 설계용 프롬프트 (3개)</h3>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px">아키텍처·구조 결정</p>
+      <ul>
+        <li>"하네스 엔지니어링 구축해<br><em>+ Anthropic URL 제공</em>"</li>
+        <li>"아키텍처 README에 만들어"</li>
+        <li>"커밋 단위 잘게, Gitflow 전략"</li>
+      </ul>
+    </div>
+    <div class="card" style="border-top:4px solid var(--blue)">
+      <h3>⚙️ 구현용 프롬프트 (4개)</h3>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px">반복 실행 위임</p>
+      <ul>
+        <li>"/ralph-loop 스프린트 단위 구현 시작해"</li>
+        <li>"Swagger 적용해. 훅으로 자동화"</li>
+        <li>"도커 지금 실행중임"</li>
+        <li>"Swagger URL 가져와봐"</li>
+      </ul>
+    </div>
+    <div class="card" style="border-top:4px solid var(--red)">
+      <h3>🐛 디버깅용 프롬프트 (2개)</h3>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px">진단·수정 위임</p>
+      <ul>
+        <li>"/ralph-loop 실행해보고 안되는 부분 식별해서 디버깅해. 수정이나 모든 행위들도 Gitflow 전략"</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    💡 핵심 패턴: <strong>"무엇을 해라"</strong>가 아닌 <strong>"어떻게 판단하고 반복하라"</strong> — 프롬프트가 절차보다 <strong>구조</strong>를 지정
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 9 — Before & After 프롬프트
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>나쁜 프롬프트 vs 좋은 프롬프트</h2>
+    <div class="sub">같은 목표 — 다른 결과</div>
+  </div>
+
+  <div class="ba-wrap" style="margin-bottom:16px">
+    <div class="ba-box ba-bad">
+      <div class="ba-label">❌ 나쁜 프롬프트</div>
+      <div class="ba-text">"Spring Boot 백엔드 만들어줘.<br>로그인, 채팅, 일정 관리 기능 포함해서."</div>
+    </div>
+    <div class="ba-box ba-good">
+      <div class="ba-label">✅ 실제 사용한 프롬프트</div>
+      <div class="ba-text">"https://anthropic.com/engineering/harness-design-long-running-apps<br>이거 읽고 하네스 엔지니어링을 위한<br>에이전트를 먼저 구축해"</div>
+    </div>
+  </div>
+
+  <div class="ba-wrap">
+    <div class="ba-box ba-bad">
+      <div class="ba-label">❌ 나쁜 프롬프트</div>
+      <div class="ba-text">"에러 고쳐줘.<br>테스트가 실패하고 서버가 안 켜져."</div>
+    </div>
+    <div class="ba-box ba-good">
+      <div class="ba-label">✅ 실제 사용한 프롬프트</div>
+      <div class="ba-text">"/ralph-loop 실행해보고 안되는 부분 식별해서 디버깅해.<br>수정이나 다른 모든 행위들도 Gitflow 전략"</div>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:16px">
+    📌 좋은 프롬프트의 공통점: <strong>① 참조 자료 제공</strong> · <strong>② 반복 방법 지정</strong> · <strong>③ 제약 조건 명시</strong> (Gitflow, 계층 분리 등)
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 10 — CLAUDE.md의 역할
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>CLAUDE.md — 프로젝트 헌법</h2>
+    <div class="sub">모든 에이전트가 매 실행 시 최우선으로 참조하는 단일 진실 소스</div>
+  </div>
+
+  <div class="cols cols-2" style="width:100%; align-items:start; gap:20px">
+    <div style="display:flex; flex-direction:column; gap:10px">
+      <div class="list-item">
+        <span class="icon">📋</span>
+        <div><strong>요구사항 43개</strong><br><span style="font-size:12px;color:#64748b">ADM/PAT/STA 카테고리 + 우선순위 + 필수 여부</span></div>
+      </div>
+      <div class="list-item">
+        <span class="icon">⚙️</span>
+        <div><strong>기술 스택 표</strong><br><span style="font-size:12px;color:#64748b">AI가 임의로 기술을 바꾸지 않도록 고정</span></div>
+      </div>
+      <div class="list-item">
+        <span class="icon">📁</span>
+        <div><strong>폴더 구조 트리</strong><br><span style="font-size:12px;color:#64748b">global/ · domain/ · infra/ 패키지 레이아웃</span></div>
+      </div>
+      <div class="list-item">
+        <span class="icon">🔐</span>
+        <div><strong>RBAC 전략</strong><br><span style="font-size:12px;color:#64748b">Role-Permission N:M DB 설계 + MVP 구현 방식</span></div>
+      </div>
+      <div class="list-item">
+        <span class="icon">📌</span>
+        <div><strong>개발 컨벤션</strong><br><span style="font-size:12px;color:#64748b">Conventional Commits · Gitflow · 잘게 쪼개기</span></div>
+      </div>
+      <div class="list-item" style="border-bottom:none">
+        <span class="icon">🚫</span>
+        <div><strong>Trade-offs (제외 범위)</strong><br><span style="font-size:12px;color:#64748b">결제, EMR 연동 — AI가 범위를 벗어나지 않도록</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="code-block" style="font-size:11.5px">
+<span class="cm">## 개발 컨벤션 (CLAUDE.md 발췌)</span>
+
+<span class="kw">- Java 21</span> (record, sealed class, pattern matching 적극 활용)
+<span class="kw">- Spring Boot 3.x</span> + Spring Security 6.x
+<span class="kw">- 커밋 메시지:</span> Conventional Commits
+  (feat/fix/chore/docs/test/refactor)
+<span class="kw">- 커밋 단위:</span> 잘게 쪼개기
+  Entity → Repository → Service
+  → Controller → Test <span class="cm">각각 커밋</span>
+<span class="kw">- 브랜치 전략:</span> Gitflow
+  feature/sprint-{N}-{desc}
+
+<span class="cm">## Trade-offs (MVP 범위)</span>
+
+<span class="str">- EMR 연동 제외</span>  <span class="cm"># 의료 행위 외 컨시어지 집중</span>
+<span class="str">- 결제 기능 제외</span>  <span class="cm"># 글로벌 PG 완전 배제</span>
+<span class="str">- 프론트엔드 별도</span> <span class="cm"># 백엔드 API만 구현</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 11 — [섹션] 아키텍처
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide slide-section" style="background:linear-gradient(135deg,#0f766e,#0f3460)">
+  <div class="sec-num">04</div>
+  <h2>에이전트 아키텍처</h2>
+  <p>Generator-Evaluator 3계층 — AI가 AI를 감시한다</p>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 12 — 에이전트 3계층 아키텍처
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>에이전트 3계층 아키텍처</h2>
+    <div class="sub">Anthropic Harness Engineering 패턴 적용 — "자기평가 함정" 방지</div>
+  </div>
+
+  <div style="width:100%">
+    <div class="tier tier-1">
+      <span class="tier-badge">TIER 1<br>PLANNER</span>
+      <div class="tier-agents">
+        <span class="agent-chip">📋 sprint-planner</span>
+      </div>
+      <div style="margin-left:12px; font-size:13px; color:#4c1d95">
+        <strong>역할:</strong> 요구사항 → 스프린트 분해 + contract.md 작성<br>
+        <span style="font-size:12px">⚠️ 코드 작성 금지 — 계획만</span>
+      </div>
+      <span class="tier-contract">→ contract.md</span>
+    </div>
+
+    <div class="tier-arrow">↓</div>
+
+    <div class="tier tier-2">
+      <span class="tier-badge">TIER 2<br>GENERATOR</span>
+      <div class="tier-agents">
+        <span class="agent-chip">🏗️ project-init</span>
+        <span class="agent-chip">🗄️ db-designer</span>
+        <span class="agent-chip">⚙️ feature-impl</span>
+      </div>
+      <div style="margin-left:12px; font-size:13px; color:#1e3a8a">
+        <strong>역할:</strong> DB 스키마 + DTO→Repo→Service→Controller + 테스트 구현<br>
+        <span style="font-size:12px">contract.md를 읽고 범위 내에서만 구현</span>
+      </div>
+      <span class="tier-contract">→ generator-output.md</span>
+    </div>
+
+    <div class="tier-arrow">↓</div>
+
+    <div class="tier tier-3">
+      <span class="tier-badge">TIER 3<br>EVALUATOR</span>
+      <div class="tier-agents">
+        <span class="agent-chip">🔍 evaluator</span>
+        <span class="agent-chip">✅ build-verifier</span>
+      </div>
+      <div style="margin-left:12px; font-size:13px; color:#14532d">
+        <strong>역할:</strong> 빌드/테스트 실행 + 31개 체크리스트 검증 + 코드 리뷰<br>
+        <span style="font-size:12px">⚠️ 코드 수정 금지 — 보고서만 작성</span>
+      </div>
+      <span class="tier-contract">→ evaluator-report.md</span>
+    </div>
+
+    <div style="display:flex; gap:24px; margin-top:14px; align-items:center">
+      <div style="display:flex; align-items:center; gap:10px">
+        <span style="font-size:13px; color:#16a34a; font-weight:700">✅ PASS</span>
+        <span style="font-size:13px; color:#64748b">→ git commit → 다음 스프린트</span>
+      </div>
+      <div style="width:1px; height:20px; background:#e2e8f0"></div>
+      <div style="display:flex; align-items:center; gap:10px">
+        <span style="font-size:13px; color:#dc2626; font-weight:700">❌ FAIL</span>
+        <span style="font-size:13px; color:#64748b">→ feature-impl 재호출 → 수정 사이클</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 13 — Ralph Loop 흐름도
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>Ralph Loop — 자율 반복 개발</h2>
+    <div class="sub">동일한 프롬프트를 반복 주입 → AI가 이전 작업을 파일/git에서 직접 확인하며 이어서 진행</div>
+  </div>
+
+  <div style="width:100%; margin-bottom:20px">
+    <!-- Loop diagram -->
+    <div style="display:grid; grid-template-columns:1fr 60px 1fr; gap:0; width:100%">
+      <!-- Left: prompt injection -->
+      <div class="card" style="text-align:center; background:linear-gradient(135deg,#ede9fe,#dbeafe)">
+        <h3 style="color:#7c3aed">👤 사람 입력 (1회)</h3>
+        <div style="font-size:13px; font-family:monospace; background:white; padding:10px; border-radius:8px; margin-top:8px; color:#334155">
+          "/ralph-loop<br>이제 스프린트 단위 구현 시작해"
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:center; font-size:24px; color:#94a3b8">→</div>
+      <!-- Right: loop -->
+      <div style="border:2px dashed var(--blue); border-radius:12px; padding:16px; position:relative">
+        <div style="position:absolute; top:-10px; left:16px; background:var(--blue); color:white; font-size:11px; font-weight:700; padding:2px 10px; border-radius:10px">RALPH LOOP (자동 반복)</div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px">
+          <div class="flow" style="font-size:12px">
+            <div class="flow-box" style="background:#7c3aed; font-size:11px; padding:7px 12px">git 상태 확인</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-box" style="font-size:11px; padding:7px 12px">다음 스프린트 계약 읽기</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-box" style="background:#16a34a; font-size:11px; padding:7px 12px">구현 + 커밋</div>
+          </div>
+          <div style="text-align:center; font-size:12px; color:#64748b">↳ 완료되면 다음 이터레이션 자동 시작</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols cols-2" style="width:100%">
+    <div class="card" style="border-left:4px solid #16a34a">
+      <h3>Ralph Loop #1 — 구현</h3>
+      <table style="font-size:12px">
+        <tr><td style="color:#64748b; padding:4px 0">프롬프트</td><td>"스프린트 단위 구현 시작해"</td></tr>
+        <tr><td style="color:#64748b; padding:4px 0">Iteration 1</td><td>Sprint 0 + 1 + 2 구현</td></tr>
+        <tr><td style="color:#64748b; padding:4px 0">Iteration 2</td><td>Sprint 3 + 4 + 5 + 6 + 7 구현</td></tr>
+        <tr><td style="color:#64748b; padding:4px 0">결과</td><td><strong>43/43 요구사항, 76 엔드포인트</strong></td></tr>
+      </table>
+    </div>
+    <div class="card" style="border-left:4px solid var(--red)">
+      <h3>Ralph Loop #2 — 디버깅</h3>
+      <table style="font-size:12px">
+        <tr><td style="color:#64748b; padding:4px 0">프롬프트</td><td>"실행해보고 안되는 부분 디버깅해"</td></tr>
+        <tr><td style="color:#64748b; padding:4px 0">발견</td><td>33개 테스트 실패 + 부팅 에러 4건</td></tr>
+        <tr><td style="color:#64748b; padding:4px 0">수정</td><td>Hotfix 브랜치 2개 자동 생성</td></tr>
+        <tr><td style="color:#64748b; padding:4px 0">결과</td><td><strong>204/204 PASS + 3.4초 정상 부팅</strong></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 14 — 스프린트 실행 결과
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>스프린트별 구현 결과</h2>
+    <div class="sub">Sprint 0~7 · 각 스프린트마다 contract → generator → evaluator PASS</div>
+  </div>
+
+  <table>
+    <thead><tr><th>Sprint</th><th>제목</th><th>Entity</th><th>엔드포인트</th><th>테스트</th><th>Flyway</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag tag-gray">0</span></td><td>Foundation (인프라 세팅)</td><td>—</td><td>0</td><td>—</td><td>V1</td></tr>
+      <tr><td><span class="tag tag-blue">1</span></td><td>Auth + Member + RBAC</td><td>8</td><td>14</td><td>54</td><td>V2</td></tr>
+      <tr><td><span class="tag tag-blue">2</span></td><td>Patient Onboarding</td><td>3</td><td>11</td><td>27</td><td>V3</td></tr>
+      <tr><td><span class="tag tag-blue">3</span></td><td>File Upload</td><td>1</td><td>3</td><td>17</td><td>V4</td></tr>
+      <tr><td><span class="tag tag-blue">4</span></td><td>Proposal / Quotation</td><td>3</td><td>8</td><td>21</td><td>V5</td></tr>
+      <tr><td><span class="tag tag-yellow">5</span></td><td>Journey Core ⭐ 핵심</td><td>5</td><td>17</td><td>32</td><td>V6</td></tr>
+      <tr><td><span class="tag tag-blue">6</span></td><td>Chat + Translation</td><td>3</td><td>8</td><td>16</td><td>V7</td></tr>
+      <tr><td><span class="tag tag-blue">7</span></td><td>Notification + Dashboard + Aftercare</td><td>5</td><td>15</td><td>30</td><td>V8</td></tr>
+      <tr style="font-weight:700; background:#f0fdf4">
+        <td>합계</td><td></td><td>28</td><td><strong>76</strong></td><td><strong>197</strong></td><td>V1~V8</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 15 — 실제 생성된 코드
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>AI가 생성한 코드 — 핵심 패턴 2개</h2>
+    <div class="sub">Java 21 record DTO + Enum 상태 전이 로직</div>
+  </div>
+
+  <div class="cols cols-2" style="width:100%; align-items:start; gap:16px">
+    <div>
+      <div style="font-size:12px; font-weight:700; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px">ApiResponse.java — Java 21 record 패턴</div>
+      <div class="code-block">
+<span class="cm">// 공통 응답 래퍼 — 모든 API 응답에 적용</span>
+<span class="kw">@JsonInclude</span>(<span class="fn">JsonInclude</span>.Include.NON_NULL)
+<span class="kw">public record</span> <span class="fn">ApiResponse</span>&lt;T&gt;(
+    <span class="kw">boolean</span> success,
+    <span class="fn">String</span> message,
+    T data,
+    <span class="fn">ErrorDetail</span> error
+) {
+    <span class="kw">public static</span> &lt;T&gt; <span class="fn">ApiResponse</span>&lt;T&gt; <span class="fn">success</span>(T data) {
+        <span class="kw">return new</span> <span class="fn">ApiResponse</span>(<span class="kw">true</span>, <span class="kw">null</span>, data, <span class="kw">null</span>);
+    }
+    <span class="kw">public static</span> &lt;T&gt; <span class="fn">ApiResponse</span>&lt;T&gt; <span class="fn">error</span>(<span class="fn">ErrorCode</span> code) {
+        <span class="kw">return new</span> <span class="fn">ApiResponse</span>(<span class="kw">false</span>, code.getMessage(),
+            <span class="kw">null</span>, <span class="kw">new</span> <span class="fn">ErrorDetail</span>(code.getCode(), ...));
+    }
+}
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px; font-weight:700; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px">ScheduleItemStatus.java — 순차 상태 전이</div>
+      <div class="code-block">
+<span class="kw">public enum</span> <span class="fn">ScheduleItemStatus</span> {
+    SCHEDULED, EN_ROUTE, ARRIVED,
+    IN_PROGRESS, COMPLETED, CANCELLED;
+
+    <span class="kw">public boolean</span> <span class="fn">canTransitionTo</span>(<span class="fn">ScheduleItemStatus</span> next) {
+        <span class="kw">if</span> (next == CANCELLED) {
+            <span class="kw">return</span> this != COMPLETED &amp;&amp; this != CANCELLED;
+        }
+        <span class="kw">if</span> (this == CANCELLED || this == COMPLETED)
+            <span class="kw">return false</span>;
+        <span class="cm hl">        // Hotfix: 단계 건너뛰기 방지 (ordinal 순서만 허용)</span>
+<span class="hl">        return next.ordinal() == this.ordinal() + 1;</span>
+    }
+}
+      </div>
+      <div class="callout" style="margin-top:10px; font-size:12px">
+        🔴 <strong>Hotfix 수정 지점</strong>: 처음에는 단계 건너뛰기(SCHEDULED→COMPLETED)가 허용됨 → 순차 전이 조건으로 수정
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 16 — [섹션] 에러 & 트러블슈팅
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide slide-section" style="background:linear-gradient(135deg,#991b1b,#7c2d12)">
+  <div class="sec-num">05</div>
+  <h2>에러 & 트러블슈팅</h2>
+  <p>AI도 실수한다 — 하지만 AI가 직접 고친다</p>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 17 — Hotfix #1: 테스트 실패
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>Hotfix #1: 33개 테스트 실패</h2>
+    <div class="sub">브랜치: <code style="background:#f1f5f9;padding:2px 8px;border-radius:4px">hotfix/build-test-fix</code></div>
+  </div>
+
+  <div class="err-flow" style="margin-bottom:16px">
+    <div class="err-box err-problem">
+      <div class="err-label">🔴 문제</div>
+      <div class="err-content">11개 Controller 테스트 전체 실패 (33건)<br><br>테스트 실행 시 <code>NullPointerException</code> 발생</div>
+    </div>
+    <div class="err-arrow">→</div>
+    <div class="err-box err-cause">
+      <div class="err-label">🟡 원인</div>
+      <div class="err-content"><code>@WithMockUser</code>가 커스텀 <code>UserPrincipal</code>을 생성하지 못함<br><br><code>@AuthenticationPrincipal</code>이 <code>null</code> 반환 → NPE</div>
+    </div>
+    <div class="err-arrow">→</div>
+    <div class="err-box err-fix">
+      <div class="err-label">🟢 해결</div>
+      <div class="err-content"><code>SecurityTestUtil</code> 유틸 생성<br><br><code>setAuthentication(memberId, role)</code>으로 SecurityContext에 <code>UserPrincipal</code> 직접 주입</div>
+    </div>
+  </div>
+
+  <div class="code-block" style="font-size:12px">
+<span class="cm">// Before (실패): @WithMockUser는 UserPrincipal을 못 만든다</span>
+<span class="kw">@Test</span>
+<span class="fn">@WithMockUser</span>(username = <span class="str">"testUser"</span>)
+<span class="kw">void</span> <span class="fn">getMyProfile</span>() { ... }
+
+<span class="cm">// After (수정): SecurityTestUtil로 직접 주입</span>
+<span class="kw">@BeforeEach void</span> <span class="fn">setup</span>() {
+    <span class="fn">SecurityTestUtil</span>.<span class="fn">setAuthentication</span>(memberId, <span class="str">"PATIENT"</span>);
+}
+  </div>
+
+  <div style="margin-top:12px; display:flex; gap:12px">
+    <div class="callout red" style="font-size:13px; flex:1">
+      <strong>+1 추가 버그:</strong> <code>ScheduleItemStatus.canTransitionTo()</code>가 ordinal 비교 오류로 단계 건너뛰기 허용 (SCHEDULED→COMPLETED 가능) → 순차 전이만 허용하도록 수정
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 18 — Hotfix #2: 런타임 부팅 실패
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>Hotfix #2: 앱 부팅 실패 4건</h2>
+    <div class="sub">브랜치: <code style="background:#f1f5f9;padding:2px 8px;border-radius:4px">hotfix/runtime-fix</code> · 수정 전 → 후 비교</div>
+  </div>
+
+  <table style="margin-bottom:16px">
+    <thead><tr><th>문제</th><th>원인</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-red">JwtProperties bean 없음</span></td>
+        <td><code>@ConfigurationProperties</code> record에<br><code>@EnableConfigurationProperties</code> 미등록</td>
+        <td><code>KMedTourApplication</code>에 어노테이션 추가</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-red">StorageService bean 없음</span></td>
+        <td><code>@Profile("local")</code>만 지원<br>test 프로필에서 bean 미생성</td>
+        <td><code>@Profile({"local", "test"})</code>로 확장</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-red">RedisConnectionFactory 없음</span></td>
+        <td><code>RedisConfig</code>가 무조건 Redis 연결 시도</td>
+        <td><code>@ConditionalOnProperty</code> 조건부 로딩</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-red">Swagger UI 403</span></td>
+        <td>SecurityConfig에서 <code>/swagger-ui.html</code> 경로 누락</td>
+        <td><code>requestMatchers</code>에 경로 추가</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="cols cols-2" style="width:100%; gap:12px">
+    <div class="callout red">
+      <strong>수정 전:</strong> 3가지 에러로 부팅 실패 · 테스트 171/204 (33 failed) · Swagger 403
+    </div>
+    <div class="callout green">
+      <strong>수정 후:</strong> 3.4초 내 정상 부팅 · 테스트 204/204 PASS · Swagger 200 OK
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 19 — [섹션] 회고 & 인사이트
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide slide-section" style="background:linear-gradient(135deg,#065f46,#0f3460)">
+  <div class="sec-num">06</div>
+  <h2>회고 & 인사이트</h2>
+  <p>"AI가 코딩을 대체한다"가 아니라 — 새로운 개발 역량이 생긴 것</p>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 20 — 효과적이었던 점 & 한계
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>효과적이었던 점 vs 한계</h2>
+    <div class="sub">AI 개발을 경험하며 발견한 패턴</div>
+  </div>
+
+  <div class="cols cols-2" style="width:100%; gap:16px; margin-bottom:16px">
+    <div>
+      <div style="font-size:13px; font-weight:700; color:#16a34a; margin-bottom:10px">✅ AI가 잘 한 것</div>
+      <div class="list-item">
+        <span class="icon">⚡</span>
+        <div><strong>반복 패턴 실행 속도</strong><br><span style="font-size:12px;color:#64748b">Controller→Service→Repository 구조를 8번 반복 — 일관성 완벽</span></div>
+      </div>
+      <div class="list-item">
+        <span class="icon">📐</span>
+        <div><strong>아키텍처 준수</strong><br><span style="font-size:12px;color:#64748b">CLAUDE.md 명세 그대로 — ApiResponse 래핑, BaseEntity 상속, @PreAuthorize 일관 적용</span></div>
+      </div>
+      <div class="list-item">
+        <span class="icon">🧪</span>
+        <div><strong>테스트 자동 작성</strong><br><span style="font-size:12px;color:#64748b">@DisplayName 한국어, Given-When-Then 패턴 204개 자동 생성</span></div>
+      </div>
+      <div class="list-item" style="border-bottom:none">
+        <span class="icon">📝</span>
+        <div><strong>문서화 + git 관리</strong><br><span style="font-size:12px;color:#64748b">74개 커밋 자동 분류, README + sprint 계약서 자동 작성</span></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13px; font-weight:700; color:#dc2626; margin-bottom:10px">⚠️ 한계 & 주의할 점</div>
+      <div class="list-item">
+        <span class="icon">🔌</span>
+        <div><strong>외부 연동은 Stub 처리</strong><br><span style="font-size:12px;color:#64748b">OAuth2 실제 검증, 이메일 발송, 번역 API — TODO 4개 미구현</span></div>
+      </div>
+      <div class="list-item">
+        <span class="icon">🧩</span>
+        <div><strong>초기 버그 발생</strong><br><span style="font-size:12px;color:#64748b">@WithMockUser 호환성, @Profile 누락, 부팅 설정 — 실행해봐야 발견됨</span></div>
+      </div>
+      <div class="list-item">
+        <span class="icon">📋</span>
+        <div><strong>사전 명세가 품질을 결정</strong><br><span style="font-size:12px;color:#64748b">CLAUDE.md와 api-spec.md가 부실했다면 결과도 부실해짐</span></div>
+      </div>
+      <div class="list-item" style="border-bottom:none">
+        <span class="icon">👁️</span>
+        <div><strong>검증 책임은 사람에게</strong><br><span style="font-size:12px;color:#64748b">Evaluator가 보고서를 써도, 최종 판단은 사람이 해야 함</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 21 — 핵심 인사이트
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>핵심 인사이트 — 프롬프트 엔지니어링 = 새로운 개발 역량</h2>
+    <div class="sub">이번 프로젝트에서 배운 3가지</div>
+  </div>
+
+  <div class="cols cols-3" style="width:100%; margin-bottom:20px">
+    <div class="insight-card">
+      <div class="insight-icon">🏛️</div>
+      <div class="insight-title">구조가 먼저다</div>
+      <div class="insight-body">
+        "코드 짜줘"보다 CLAUDE.md 작성이 더 중요했다. AI의 자유도를 제한하는 <strong>헌법</strong>이 품질을 결정한다.
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">🔁</div>
+      <div class="insight-title">반복을 설계하라</div>
+      <div class="insight-body">
+        Ralph Loop + Generator-Evaluator 패턴처럼, <strong>AI가 스스로 검증하고 수정하는 루프</strong>를 설계하면 사람 개입이 최소화된다.
+      </div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">📎</div>
+      <div class="insight-title">컨텍스트를 파일로 전달하라</div>
+      <div class="insight-body">
+        에이전트 간 상태를 채팅이 아닌 <strong>contract.md → generator-output.md → evaluator-report.md</strong> 파일 체인으로 전달.
+      </div>
+    </div>
+  </div>
+
+  <div class="callout" style="font-size:15px; font-weight:600">
+    🎯 결론: AI 개발에서 사람의 역할은 <strong>"코더"에서 "아키텍트 + 프롬프트 엔지니어"로 전환된다</strong>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SLIDE 22 — Q&A
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="slide slide-qa">
+  <h2>Q & A</h2>
+  <p style="margin-bottom:32px">궁금한 점은 무엇이든 질문해주세요</p>
+  <div style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center">
+    <div style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; padding:12px 20px; color:#e2e8f0; font-size:13px; text-align:center">
+      <div style="font-size:20px; margin-bottom:4px">📂</div>
+      <strong>GitHub</strong><br>yhyh4420/sogang-vibeCoder-be
+    </div>
+    <div style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; padding:12px 20px; color:#e2e8f0; font-size:13px; text-align:center">
+      <div style="font-size:20px; margin-bottom:4px">📖</div>
+      <strong>API 문서</strong><br>Swagger UI (76 endpoints)
+    </div>
+    <div style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; padding:12px 20px; color:#e2e8f0; font-size:13px; text-align:center">
+      <div style="font-size:20px; margin-bottom:4px">🤖</div>
+      <strong>참고 문서</strong><br>anthropic.com/engineering/<br>harness-design-long-running-apps
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- Navigation -->
+<div id="nav">
+  <button onclick="go(-1)">◀ 이전</button>
+  <span id="counter">1 / 22</span>
+  <button onclick="go(1)">다음 ▶</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let cur = 0;
+
+  function show(n) {
+    slides[cur].classList.remove('active');
+    cur = (n + total) % total;
+    slides[cur].classList.add('active');
+    document.getElementById('counter').textContent = (cur + 1) + ' / ' + total;
+    document.getElementById('progress').style.width = ((cur + 1) / total * 100) + '%';
+  }
+
+  function go(dir) { show(cur + dir); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); go(-1); }
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End')  show(total - 1);
+    if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+
+  // Touch/swipe
+  let tx = 0;
+  document.addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  document.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+  });
+
+  // Init
+  show(0);
+</script>
+</body>
+</html>
