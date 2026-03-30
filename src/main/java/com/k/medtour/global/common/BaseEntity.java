@@ -1,32 +1,21 @@
 package com.k.medtour.global.common;
 
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-@MappedSuperclass
-@EntityListeners(AuditingEntityListener.class)
+/**
+ * Base entity fields for JDBC-based entities.
+ * Subclasses should include these fields in their table schemas.
+ */
 @Getter
+@Setter
 public abstract class BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @CreatedDate
     private LocalDateTime createdAt;
-
-    @LastModifiedDate
     private LocalDateTime updatedAt;
-
     private LocalDateTime deletedAt;
 
     public void softDelete() {
@@ -35,5 +24,21 @@ public abstract class BaseEntity {
 
     public boolean isDeleted() {
         return this.deletedAt != null;
+    }
+
+    /**
+     * Call before INSERT to set timestamps.
+     */
+    public void prePersist() {
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    /**
+     * Call before UPDATE to refresh updatedAt.
+     */
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

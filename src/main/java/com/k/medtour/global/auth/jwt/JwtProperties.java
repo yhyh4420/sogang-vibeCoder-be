@@ -1,8 +1,9 @@
 package com.k.medtour.global.auth.jwt;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
-@ConfigurationProperties(prefix = "jwt")
+/**
+ * JWT configuration properties.
+ * No longer uses Spring @ConfigurationProperties; values are set via AppConfig.
+ */
 public record JwtProperties(
         String secret,
         long accessTokenExpiration,
